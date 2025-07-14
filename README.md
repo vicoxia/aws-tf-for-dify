@@ -52,9 +52,8 @@ sudo yum -y install terraform
 # macOS
 brew install kubectl
 
-# Linux
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+# Amazon Linux
+请参考：https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html
 ```
 
 ### 2. AWS 权限配置
