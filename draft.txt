@@ -1,0 +1,56 @@
+1.Dify Enterprise测试环境部署在AWS云上需要的服务和配置概要：
+
+首先要求所有的服务都采用最新的amazon graviton芯片支持的算力。
+
+EKS集群：1 个工作节点（Worker Node）：4 核 CPU，16 GB 内存
+容器镜像仓库：AWS ECR（使用 AK/SK 或 IRSA）
+持久化存储：AWS S3（使用 AK/SK 或 IRSA）100 GB 存储空间
+RDS PostgreSQL 数据库版本 14+，2 核 CPU，4 GB 内存，256 GB 存储空间
+ElastiCache：Redis 数据库，版本 6+，1 GB 内存
+向量数据库：amazon opensearch，1 台实例，4 核 CPU，8 GB 内存，100 GB 存储空间
+
+2.Dify Enterprise生产环境部署在AWS云上需要的服务和配置概要：
+EKS集群：6 个工作节点（Worker Node）：每个节点8 核 CPU，32 GB 内存
+容器镜像仓库：AWS ECR（使用 AK/SK 或 IRSA）
+持久化存储：AWS S3（使用 AK/SK 或 IRSA）512 GB 存储空间
+RDS PostgreSQL 数据库版本 14+，4 核 CPU，8 GB 内存，512 GB 存储空间
+ElastiCache：Redis 数据库，版本 6+，2 GB 内存
+向量数据库：amazon opensearch，3台实例，每台8 核 CPU，64 GB 内存，100 GB 存储空间
+
+3. 自动化脚本采用Terraform，terraform状态管理需要采用tf_state.md文件中介绍的方案
+
+4. 所有配置信息如下：
+Configure environment variables:
+Modify the environment variable values in the .env file.
+
+ENVIRONMENT: Specifies the deployment environment; must be either test or prod.
+
+CDK_DEFAULT_REGION: The AWS region where Dify Enterprise will be deployed.
+
+CDK_DEFAULT_ACCOUNT: Your AWS account ID.
+
+DEPLOY_VPC_ID: The ID of an existing VPC for deployment. If not set, CDK will create one for you.
+
+Note: If using an existing VPC
+
+Make sure you have 2 or more public subnets for Application Load Balancer, and 2 or more private subnets can access internet(associated with NAT) to pull docker image from internet.
+
+Add Tag for the subnets(Otherwise, Step 6 will show WARN about auto-tag failed, which will result in the Application Load Balancer failing to be created successfully.):
+
+Subnet Type	Tag key	tag value
+public	kubernetes.io/role/elb	1
+private	kubernetes.io/role/internal-elb	1
+Subnets Configuration (DEPLOY_VPC_ID required, comma-separated without spaces, private subnets is recommended by AWS security best practices):
+
+EKS_CLUSTER_SUBNETS: Subnet IDs for the EKS control plane. Requires at least 2 subnets in different Availability Zones (AZs).
+EKS_NODES_SUBNETS: Subnet IDs for the EKS worker nodes. Requires at least 2 subnets in different AZs.
+REDIS_SUBNETS: Subnet IDs for Redis deployment.
+RDS_SUBNETS: subnet ids for RDS database. (At least 2 with different AZs)
+OPENSEARCH_SUBNETS: Subnet IDs for OpenSearch deployment.
+OPENSEARCH_ADMINNAME: OpenSearch Domain master ame.
+OPENSEARCH_PASSWORD: OpenSearch Domain master password.
+AWS_EKS_CHART_REPO_URL: (For AWS China regions ONLY) The AWS EKS Helm chart repository URL.
+
+RDS_PUBLIC_ACCESSIBLE: Set to true to make RDS publicly accessible (NOT RECOMMENDED).
+
+5. 需要编写部署手册，包括所有需要的命令和工具的安装（考虑部署在aws海外区域和aws中国区域）
