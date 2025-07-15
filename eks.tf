@@ -72,11 +72,14 @@ resource "aws_iam_role_policy_attachment" "eks_container_registry_policy" {
   role       = aws_iam_role.eks_node_group.name
 }
 
+# Get latest EKS version
+data "aws_eks_cluster_versions" "latest" {}
+
 # EKS Cluster
 resource "aws_eks_cluster" "main" {
   name     = "dify-${var.environment}-cluster"
   role_arn = aws_iam_role.eks_cluster.arn
-  version  = "1.28"
+  version  = data.aws_eks_cluster_versions.latest.latest_version
 
   vpc_config {
     subnet_ids = local.cluster_subnets

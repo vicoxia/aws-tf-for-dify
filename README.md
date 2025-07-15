@@ -110,6 +110,7 @@ opensearch_subnets   = ["subnet-xxxxxxxx", "subnet-yyyyyyyy"]
 
 ```bash
 # 1. 临时禁用远程状态
+
 mv backend.tf backend.tf.bak
 
 # 2. 初始化项目

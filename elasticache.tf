@@ -47,14 +47,19 @@ resource "aws_security_group" "redis" {
   }
 }
 
+# Get latest Redis version
+data "aws_elasticache_engine_versions" "redis" {
+  engine = "redis"
+}
+
 # ElastiCache Redis Cluster
 resource "aws_elasticache_cluster" "main" {
   cluster_id           = "dify-${var.environment}-redis"
   engine               = "redis"
-  engine_version       = "6.2"
+  engine_version       = data.aws_elasticache_engine_versions.redis.engine_versions[0]
   node_type            = local.redis_config.node_type
   num_cache_nodes      = local.redis_config.num_cache_nodes
-  parameter_group_name = "default.redis6.x"
+  parameter_group_name = "default.redis${substr(data.aws_elasticache_engine_versions.redis.engine_versions[0], 0, 1)}.x"
   port                 = 6379
   subnet_group_name    = aws_elasticache_subnet_group.main.name
   security_group_ids   = [aws_security_group.redis.id]

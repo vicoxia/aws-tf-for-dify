@@ -45,10 +45,15 @@ resource "aws_security_group" "opensearch" {
   }
 }
 
+# Get latest OpenSearch version
+data "aws_opensearch_domain_versions" "latest" {
+  engine_type = "OpenSearch"
+}
+
 # OpenSearch Domain
 resource "aws_opensearch_domain" "main" {
   domain_name    = "dify-${var.environment}-opensearch"
-  engine_version = "OpenSearch_2.3"
+  engine_version = data.aws_opensearch_domain_versions.latest.domain_versions[0]
 
   cluster_config {
     instance_type  = local.opensearch_config.instance_type

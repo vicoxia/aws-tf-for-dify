@@ -49,12 +49,17 @@ resource "aws_security_group" "rds" {
   }
 }
 
+# Get latest PostgreSQL version
+data "aws_rds_engine_versions" "postgres" {
+  engine = "postgres"
+}
+
 # RDS Instance
 resource "aws_db_instance" "main" {
   identifier = "dify-${var.environment}-postgres"
 
   engine         = "postgres"
-  engine_version = "14.9"
+  engine_version = data.aws_rds_engine_versions.postgres.engine_versions[0]
   instance_class = local.rds_config.instance_class
 
   allocated_storage     = local.rds_config.allocated_storage
@@ -63,8 +68,8 @@ resource "aws_db_instance" "main" {
   storage_encrypted     = true
 
   db_name  = "dify"
-  username = "dify_admin"
-  password = random_password.rds_password.result
+  username = "postgres"
+  password = "postgres@123!"
 
   vpc_security_group_ids = [aws_security_group.rds.id]
   db_subnet_group_name   = aws_db_subnet_group.main.name
@@ -82,10 +87,7 @@ resource "aws_db_instance" "main" {
   }
 }
 
-resource "random_password" "rds_password" {
-  length  = 16
-  special = true
-}
+
 
 # Store RDS password in AWS Secrets Manager
 resource "aws_secretsmanager_secret" "rds_password" {
@@ -101,7 +103,7 @@ resource "aws_secretsmanager_secret_version" "rds_password" {
   secret_id = aws_secretsmanager_secret.rds_password.id
   secret_string = jsonencode({
     username = aws_db_instance.main.username
-    password = random_password.rds_password.result
+    password = "postgres@123!"
     endpoint = aws_db_instance.main.endpoint
     port     = aws_db_instance.main.port
     dbname   = aws_db_instance.main.db_name
