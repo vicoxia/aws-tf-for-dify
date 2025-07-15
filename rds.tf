@@ -92,7 +92,7 @@ resource "aws_db_instance" "main" {
 # Store RDS password in AWS Secrets Manager
 resource "aws_secretsmanager_secret" "rds_password" {
   name = "dify-${var.environment}-rds-password"
-  recovery_window_in_seconds = 0  # 立即删除，不保留恢复窗口
+  force_delete_without_recovery = true  # 立即删除，不保留恢复窗口
 
   tags = {
     Name        = "dify-${var.environment}-rds-password"
