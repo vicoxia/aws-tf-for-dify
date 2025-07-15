@@ -50,7 +50,7 @@ resource "aws_security_group" "rds" {
 }
 
 # Get latest PostgreSQL version
-data "aws_rds_engine_versions" "postgres" {
+data "aws_rds_engine_version" "postgres" {
   engine = "postgres"
 }
 
@@ -59,7 +59,7 @@ resource "aws_db_instance" "main" {
   identifier = "dify-${var.environment}-postgres"
 
   engine         = "postgres"
-  engine_version = data.aws_rds_engine_versions.postgres.engine_versions[0]
+  engine_version = data.aws_rds_engine_version.postgres.version
   instance_class = local.rds_config.instance_class
 
   allocated_storage     = local.rds_config.allocated_storage
