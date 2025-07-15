@@ -120,8 +120,8 @@ resource "aws_eks_node_group" "main" {
   }
 }
 
-# 添加 aws-auth ConfigMap 配置
-resource "kubernetes_config_map" "aws_auth" {
+# 更新 aws-auth ConfigMap 配置
+resource "kubernetes_config_map_v1_data" "aws_auth" {
   depends_on = [aws_eks_cluster.main]
   
   metadata {
@@ -138,6 +138,8 @@ resource "kubernetes_config_map" "aws_auth" {
     - system:nodes
 YAML
   }
+
+  force = true
 }
 
 # 添加 Kubernetes provider 配置
@@ -151,4 +153,3 @@ provider "kubernetes" {
     command     = "aws"
   }
 }
-

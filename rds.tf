@@ -86,27 +86,3 @@ resource "aws_db_instance" "main" {
     Environment = var.environment
   }
 }
-
-
-
-# Store RDS password in AWS Secrets Manager
-resource "aws_secretsmanager_secret" "rds_password" {
-  name = "dify-${var.environment}-rds-password"
-  recovery_window_in_days = 0  # 立即删除，不保留恢复窗口
-
-  tags = {
-    Name        = "dify-${var.environment}-rds-password"
-    Environment = var.environment
-  }
-}
-
-resource "aws_secretsmanager_secret_version" "rds_password" {
-  secret_id = aws_secretsmanager_secret.rds_password.id
-  secret_string = jsonencode({
-    username = var.rds_username
-    password = var.rds_password
-    endpoint = aws_db_instance.main.endpoint
-    port     = aws_db_instance.main.port
-    dbname   = aws_db_instance.main.db_name
-  })
-}
