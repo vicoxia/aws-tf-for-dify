@@ -66,6 +66,19 @@ variable "opensearch_password" {
   sensitive   = true
 }
 
+variable "rds_username" {
+  description = "RDS master username"
+  type        = string
+  default     = "postgres"
+}
+
+variable "rds_password" {
+  description = "RDS master password"
+  type        = string
+  sensitive   = true
+  default     = "postgres@123!"
+}
+
 variable "rds_public_accessible" {
   description = "Make RDS publicly accessible"
   type        = bool

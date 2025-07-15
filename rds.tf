@@ -68,8 +68,8 @@ resource "aws_db_instance" "main" {
   storage_encrypted     = true
 
   db_name  = "dify"
-  username = "postgres"
-  password = "postgres@123!"
+  username = var.rds_username
+  password = var.rds_password
 
   vpc_security_group_ids = [aws_security_group.rds.id]
   db_subnet_group_name   = aws_db_subnet_group.main.name
@@ -102,8 +102,8 @@ resource "aws_secretsmanager_secret" "rds_password" {
 resource "aws_secretsmanager_secret_version" "rds_password" {
   secret_id = aws_secretsmanager_secret.rds_password.id
   secret_string = jsonencode({
-    username = aws_db_instance.main.username
-    password = "postgres@123!"
+    username = var.rds_username
+    password = var.rds_password
     endpoint = aws_db_instance.main.endpoint
     port     = aws_db_instance.main.port
     dbname   = aws_db_instance.main.db_name
