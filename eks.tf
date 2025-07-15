@@ -98,7 +98,6 @@ resource "aws_eks_node_group" "main" {
   node_group_name = "dify-${var.environment}-nodes"
   node_role_arn   = aws_iam_role.eks_node_group.arn
   subnet_ids      = local.node_subnets
-  ami_type        = "AL2_ARM_64"  # Graviton support
 
   scaling_config {
     desired_size = local.node_config.desired_size

@@ -47,6 +47,12 @@ resource "aws_security_group" "redis" {
   }
 }
 
+# ElastiCache Parameter Group
+resource "aws_elasticache_parameter_group" "redis" {
+  name   = "dify-${var.environment}-redis-params"
+  family = "redis7.x"
+}
+
 # ElastiCache Redis Cluster
 resource "aws_elasticache_cluster" "main" {
   cluster_id           = "dify-${var.environment}-redis"
@@ -54,7 +60,7 @@ resource "aws_elasticache_cluster" "main" {
   engine_version       = "7.1"
   node_type            = local.redis_config.node_type
   num_cache_nodes      = local.redis_config.num_cache_nodes
-  parameter_group_name = "default.redis7.x"
+  parameter_group_name = aws_elasticache_parameter_group.redis.name
   port                 = 6379
   subnet_group_name    = aws_elasticache_subnet_group.main.name
   security_group_ids   = [aws_security_group.redis.id]

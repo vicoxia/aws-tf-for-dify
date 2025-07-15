@@ -19,7 +19,7 @@ opensearch_password   = "YourSecurePassword123!"
 
 # RDS Configuration
 rds_username          = "postgres"
-rds_password          = "postgres@123!"
+rds_password          = "postgres@123"
 rds_public_accessible = false
 
 # AWS China Region Configuration (only for China regions)
