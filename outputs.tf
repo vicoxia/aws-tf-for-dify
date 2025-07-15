@@ -55,11 +55,6 @@ output "rds_username" {
   sensitive   = true
 }
 
-output "rds_secret_arn" {
-  description = "RDS password secret ARN"
-  value       = aws_secretsmanager_secret.rds_password.arn
-}
-
 output "redis_endpoint" {
   description = "Redis endpoint"
   value       = aws_elasticache_cluster.main.cache_nodes[0].address
