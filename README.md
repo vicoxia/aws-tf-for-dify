@@ -135,6 +135,7 @@ terraform plan
 
 # 执行部署
 terraform apply
+？？terraform apply -parallelism=20 （使用 -parallelism=n 参数来调整并发数量（默认值为 10）
 ```
 
 ### 5. 配置 kubectl
