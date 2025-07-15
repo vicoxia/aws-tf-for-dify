@@ -106,6 +106,7 @@ resource "aws_eks_node_group" "main" {
   }
 
   instance_types = local.node_config.instance_types
+  ami_type       = "AL2023_ARM_64_STANDARD"  # 指定与 Graviton 处理器兼容的 ARM AMI
 
   depends_on = [
     aws_iam_role_policy_attachment.eks_worker_node_policy,

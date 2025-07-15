@@ -50,7 +50,7 @@ resource "aws_security_group" "redis" {
 # ElastiCache Parameter Group
 resource "aws_elasticache_parameter_group" "redis" {
   name   = "dify-${var.environment}-redis-params"
-  family = "redis7.x"
+  family = "redis7.0"  # 修改为有效的参数组系列
 }
 
 # ElastiCache Redis Cluster
