@@ -34,24 +34,30 @@ output "s3_iam_role_arn" {
 }
 
 output "rds_endpoint" {
-  description = "RDS endpoint"
-  value       = aws_db_instance.main.endpoint
+  description = "Aurora PostgreSQL endpoint"
+  value       = aws_rds_cluster.main.endpoint
+  sensitive   = true
+}
+
+output "rds_reader_endpoint" {
+  description = "Aurora PostgreSQL reader endpoint"
+  value       = aws_rds_cluster.main.reader_endpoint
   sensitive   = true
 }
 
 output "rds_port" {
-  description = "RDS port"
-  value       = aws_db_instance.main.port
+  description = "Aurora PostgreSQL port"
+  value       = aws_rds_cluster.main.port
 }
 
 output "rds_database_name" {
-  description = "RDS database name"
-  value       = aws_db_instance.main.db_name
+  description = "Aurora PostgreSQL database name"
+  value       = aws_rds_cluster.main.database_name
 }
 
 output "rds_username" {
-  description = "RDS username"
-  value       = aws_db_instance.main.username
+  description = "Aurora PostgreSQL username"
+  value       = aws_rds_cluster.main.master_username
   sensitive   = true
 }
 

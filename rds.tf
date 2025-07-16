@@ -1,19 +1,17 @@
 locals {
   rds_subnets = length(var.rds_subnets) > 0 ? var.rds_subnets : (local.create_vpc ? aws_subnet.private[*].id : [])
   
-  # Environment-specific RDS configurations
-  rds_config = var.environment == "test" ? {
-    instance_class    = "db.t4g.medium"  # 2 vCPU, 4 GB RAM (Graviton)
-    allocated_storage = 256
-    max_allocated_storage = 512
+  # Environment-specific Aurora Serverless configurations
+  aurora_config = var.environment == "test" ? {
+    min_capacity = 0.5  # 最小容量（ACU）
+    max_capacity = 4    # 最大容量（ACU）
   } : {
-    instance_class    = "db.t4g.large"   # 2 vCPU, 8 GB RAM (Graviton)
-    allocated_storage = 512
-    max_allocated_storage = 1024
+    min_capacity = 1    # 最小容量（ACU）
+    max_capacity = 8    # 最大容量（ACU）
   }
 }
 
-# RDS Subnet Group
+# RDS Subnet Group (可以用于Aurora)
 resource "aws_db_subnet_group" "main" {
   name       = "dify-${var.environment}-db-subnet-group"
   subnet_ids = local.rds_subnets
@@ -24,7 +22,7 @@ resource "aws_db_subnet_group" "main" {
   }
 }
 
-# RDS Security Group
+# RDS Security Group (可以用于Aurora)
 resource "aws_security_group" "rds" {
   name_prefix = "dify-${var.environment}-rds-"
   vpc_id      = local.vpc_id
@@ -49,40 +47,60 @@ resource "aws_security_group" "rds" {
   }
 }
 
-# Get latest PostgreSQL version
-data "aws_rds_engine_version" "postgres" {
-  engine = "postgres"
-}
-
-# RDS Instance
-resource "aws_db_instance" "main" {
-  identifier = "dify-${var.environment}-postgres"
-
-  engine         = "postgres"
-  engine_version = data.aws_rds_engine_version.postgres.version
-  instance_class = local.rds_config.instance_class
-
-  allocated_storage     = local.rds_config.allocated_storage
-  max_allocated_storage = local.rds_config.max_allocated_storage
-  storage_type          = "gp3"
-  storage_encrypted     = true
-
-  db_name  = "dify"
-  username = var.rds_username
-  password = var.rds_password
-
-  vpc_security_group_ids = [aws_security_group.rds.id]
-  db_subnet_group_name   = aws_db_subnet_group.main.name
-
-  publicly_accessible = var.rds_public_accessible
-  skip_final_snapshot = true
-
+# Aurora Serverless v2 Cluster
+resource "aws_rds_cluster" "main" {
+  cluster_identifier      = "dify-${var.environment}-aurora-postgres"
+  engine                  = "aurora-postgresql"
+  engine_mode             = "provisioned"  # 对于Serverless v2，使用provisioned模式
+  engine_version          = "15.5"         # 使用最新的Aurora PostgreSQL 15版本
+  database_name           = "dify"
+  master_username         = var.rds_username
+  master_password         = var.rds_password
+  db_subnet_group_name    = aws_db_subnet_group.main.name
+  vpc_security_group_ids  = [aws_security_group.rds.id]
+  
+  skip_final_snapshot     = true
   backup_retention_period = var.environment == "prod" ? 7 : 1
-  backup_window          = "03:00-04:00"
-  maintenance_window     = "sun:04:00-sun:05:00"
-
+  preferred_backup_window = "03:00-04:00"
+  preferred_maintenance_window = "sun:04:00-sun:05:00"
+  
+  # 启用存储加密
+  storage_encrypted       = true
+  
+  # 启用Serverless v2
+  serverlessv2_scaling_configuration {
+    min_capacity = local.aurora_config.min_capacity
+    max_capacity = local.aurora_config.max_capacity
+  }
+  
   tags = {
-    Name        = "dify-${var.environment}-postgres"
+    Name        = "dify-${var.environment}-aurora-postgres"
     Environment = var.environment
   }
+}
+
+# Aurora Serverless v2 实例
+resource "aws_rds_cluster_instance" "main" {
+  identifier          = "dify-${var.environment}-aurora-postgres-instance"
+  cluster_identifier  = aws_rds_cluster.main.id
+  instance_class      = "db.serverless"  # 使用serverless实例类型
+  engine              = aws_rds_cluster.main.engine
+  engine_version      = aws_rds_cluster.main.engine_version
+  publicly_accessible = var.rds_public_accessible
+  
+  tags = {
+    Name        = "dify-${var.environment}-aurora-postgres-instance"
+    Environment = var.environment
+  }
+}
+
+# 输出Aurora集群端点
+output "aurora_cluster_endpoint" {
+  description = "Aurora集群端点"
+  value       = aws_rds_cluster.main.endpoint
+}
+
+output "aurora_reader_endpoint" {
+  description = "Aurora读取器端点"
+  value       = aws_rds_cluster.main.reader_endpoint
 }
