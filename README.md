@@ -133,7 +133,16 @@ terraform apply
 
 # 调整并发数量以加速部署
 terraform apply -parallelism=20  # 默认值为10
+
+# 将输出同时保存到文件
+terraform apply | tee output.$(date +%Y%m%d-%H%M%S).txt
+
+# 或者保存计划和应用的输出
+terraform plan -out=tfplan | tee plan.$(date +%Y%m%d-%H%M%S).txt
+terraform apply tfplan | tee output.$(date +%Y%m%d-%H%M%S).txt
 ```
+
+**说明**：使用`tee`命令可以将输出同时显示在控制台和保存到文件中，文件名包含当前日期和时间，便于区分不同的部署记录。
 
 ### 4. 配置 kubectl
 
@@ -212,6 +221,40 @@ terraform apply destroy.tfplan
 - 验证安全组规则
 - 确认 IAM 角色权限
 - 检查 aws-auth ConfigMap 配置（见下文）
+
+### 2. AWS控制台显示"No nodes"但kubectl可以看到节点
+
+有时候在AWS控制台中，EKS集群的node group可能显示"No nodes"，但使用`kubectl get nodes`命令可以看到节点并且状态为Ready。这种不一致可能由以下原因导致：
+
+1. **控制台刷新延迟**：AWS控制台可能需要几分钟时间来刷新和显示最新的节点状态
+   - 解决方法：等待几分钟后刷新页面，或者尝试清除浏览器缓存
+
+2. **节点标签问题**：节点可能缺少AWS控制台用来识别它属于特定节点组的标签
+   - 解决方法：检查节点是否有正确的标签，特别是`eks:nodegroup-name`标签
+   ```bash
+   kubectl describe node <node-name> | grep eks:nodegroup-name
+   ```
+
+3. **IAM角色配置**：节点的IAM角色可能没有正确配置或权限不足
+   - 解决方法：确认节点IAM角色有正确的策略，特别是`AmazonEKSWorkerNodePolicy`和`AmazonEKS_CNI_Policy`
+
+4. **AWS控制台bug**：有时这可能是AWS控制台的显示问题
+   - 解决方法：使用AWS CLI验证节点状态
+   ```bash
+   aws eks list-nodegroups --cluster-name <cluster-name>
+   aws eks describe-nodegroup --cluster-name <cluster-name> --nodegroup-name <nodegroup-name>
+   ```
+
+5. **节点组和节点不匹配**：节点可能已加入集群但未正确关联到节点组
+   - 解决方法：检查节点是否使用了正确的用户数据脚本加入集群
+   ```bash
+   # 查看节点的用户数据脚本中的集群名称和节点组名称
+   aws ec2 describe-instances --instance-ids <instance-id> --query 'Reservations[].Instances[].UserData' --output text | base64 --decode
+   ```
+
+**重要提示**：如果节点在kubectl中显示为Ready，通常意味着它已经正确加入集群并且可以运行工作负载，即使AWS控制台显示有问题。在这种情况下，集群功能不受影响。
+
+### 3. Aurora 数据库连接问题
 
 ### 查看和管理 EKS 集群的 aws-auth ConfigMap
 
