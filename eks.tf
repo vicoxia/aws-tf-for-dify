@@ -159,36 +159,3 @@ resource "aws_eks_node_group" "main" {
   }
 }
 
-# 更新 aws-auth ConfigMap 配置
-resource "kubernetes_config_map_v1_data" "aws_auth" {
-  depends_on = [aws_eks_cluster.main]
-  
-  metadata {
-    name      = "aws-auth"
-    namespace = "kube-system"
-  }
-
-  data = {
-    mapRoles = <<YAML
-- rolearn: ${aws_iam_role.eks_node_group.arn}
-  username: system:node:{{EC2PrivateDNSName}}
-  groups:
-    - system:bootstrappers
-    - system:nodes
-YAML
-  }
-
-  force = true
-}
-
-# 添加 Kubernetes provider 配置
-provider "kubernetes" {
-  host                   = aws_eks_cluster.main.endpoint
-  cluster_ca_certificate = base64decode(aws_eks_cluster.main.certificate_authority[0].data)
-  
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.main.name]
-    command     = "aws"
-  }
-}

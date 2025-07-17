@@ -52,7 +52,7 @@ resource "aws_rds_cluster" "main" {
   cluster_identifier      = "dify-${var.environment}-aurora-postgres"
   engine                  = "aurora-postgresql"
   engine_mode             = "provisioned"  # 对于Serverless v2，使用provisioned模式
-  engine_version          = "15.5"         # 使用最新的Aurora PostgreSQL 15版本
+  engine_version          = "17.5"         # 使用最新的Aurora PostgreSQL 17.5版本
   database_name           = "dify"
   master_username         = var.rds_username
   master_password         = var.rds_password

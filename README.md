@@ -121,9 +121,19 @@ opensearch_subnets   = ["subnet-xxxxxxxx", "subnet-yyyyyyyy"]
 # 查看部署计划
 terraform plan
 
-# 执行部署
+# 更好的做法：保存计划并应用相同的计划
+terraform plan -out=tfplan
+terraform apply tfplan
+
+# 这样可以确保apply执行的操作与plan阶段完全一致
+# 当你看到提示"Note: You didn't use the -out option to save this plan..."时，
+# 建议使用上述方法保存计划，特别是对于大型或复杂的部署
+
+# 执行部署（标准方式，但可能与plan阶段有差异）
 terraform apply
-？？terraform apply -parallelism=20 （使用 -parallelism=n 参数来调整并发数量（默认值为 10）
+
+# 调整并发数量以加速部署
+terraform apply -parallelism=20  # 默认值为10
 ```
 
 ### 4. 配置 kubectl
@@ -175,11 +185,26 @@ terraform output -json | jq '.rds_endpoint.value'
 ## 清理资源
 
 ```bash
-# 删除所有资源
+# 标准方式：删除所有资源
 terraform destroy
 
 # 确认删除时输入 "yes"
+
+# 注意：与 terraform apply 不同，terraform destroy 不需要指定计划文件
+# 错误用法：terraform destroy "tfplan"
+
+# 如果需要生成销毁计划文件（可选）
+terraform plan -destroy -out=destroy.tfplan
+
+# 应用销毁计划
+terraform apply destroy.tfplan
 ```
+
+**说明**：
+1. `terraform destroy` 命令会自动创建一个删除所有资源的计划，并在执行前显示这个计划供用户确认
+2. 不需要在 `terraform destroy` 后面加上之前用于部署的计划文件 "tfplan"
+3. 如果希望先查看销毁计划再执行，可以使用 `terraform plan -destroy` 命令
+4. 对于需要在无人值守模式下执行的情况，可以使用 `terraform destroy -auto-approve`
 
 ## 故障排除
 
@@ -187,6 +212,75 @@ terraform destroy
 - 检查子网路由表配置
 - 验证安全组规则
 - 确认 IAM 角色权限
+- 检查 aws-auth ConfigMap 配置（见下文）
+
+### 查看和管理 EKS 集群的 aws-auth ConfigMap
+
+aws-auth ConfigMap 是 EKS 集群中的关键组件，用于控制哪些 IAM 实体（用户和角色）可以访问 Kubernetes API。
+
+#### 通过 AWS 控制台查看
+
+AWS 控制台没有直接查看 ConfigMap 的界面，但可以通过以下步骤访问：
+
+1. 登录 AWS 控制台
+2. 导航到 EKS 服务
+3. 选择您的集群
+4. 点击"访问"选项卡
+5. 在"访问条目"部分，您可以看到集群的访问配置
+6. 要查看完整的 aws-auth ConfigMap，需要使用 kubectl 命令行工具
+
+#### 使用 kubectl 查看和管理
+
+```bash
+# 配置 kubectl 以连接到您的 EKS 集群
+aws eks update-kubeconfig --region <your-region> --name <cluster-name>
+
+# 查看 aws-auth ConfigMap
+kubectl get configmap aws-auth -n kube-system -o yaml
+
+# 编辑 aws-auth ConfigMap
+kubectl edit configmap aws-auth -n kube-system
+
+# 或者，将 ConfigMap 导出到文件，编辑后应用
+kubectl get configmap aws-auth -n kube-system -o yaml > aws-auth.yaml
+# 编辑 aws-auth.yaml 文件
+kubectl apply -f aws-auth.yaml
+```
+
+#### 常见的 aws-auth ConfigMap 格式
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aws-auth
+  namespace: kube-system
+data:
+  mapRoles: |
+    - rolearn: arn:aws:iam::<account-id>:role/<node-role-name>
+      username: system:node:{{EC2PrivateDNSName}}
+      groups:
+        - system:bootstrappers
+        - system:nodes
+    # 可以添加其他 IAM 角色
+    - rolearn: arn:aws:iam::<account-id>:role/<admin-role-name>
+      username: admin
+      groups:
+        - system:masters
+  mapUsers: |
+    # 可以添加 IAM 用户
+    - userarn: arn:aws:iam::<account-id>:user/<username>
+      username: admin
+      groups:
+        - system:masters
+```
+
+#### 故障排除提示
+
+1. **节点无法加入集群**：确保节点组 IAM 角色正确映射在 aws-auth ConfigMap 中
+2. **权限问题**：检查用户或角色是否正确映射到适当的 Kubernetes 组
+3. **ConfigMap 损坏**：如果 ConfigMap 被错误编辑，可能需要重新创建它
+4. **自动更新**：添加新的节点组时，EKS 会自动更新 aws-auth ConfigMap
 
 ### 2. Aurora 数据库连接问题
 - 检查安全组配置
@@ -213,7 +307,7 @@ terraform destroy
 
 ### 方案一：使用 Screen（推荐）
 
-Screen是一个终端复用器，允许你在一个终端会话中打开多个窗口，并且在断开连接后保持会话运行。
+Screen是一个终端复用器，允许你在一个终端会话中打开多个窗口，并且在断开连接后保持会话运行。**即使完全关闭终端窗口或SSH连接断开，只要screen进程仍在远程服务器上运行，你都可以在新的终端会话中重新连接到之前的screen会话。**
 
 ```bash
 # 安装screen
@@ -233,12 +327,48 @@ terraform apply
 # 重新连接到screen会话
 screen -r terraform
 
-# 列出所有screen会话
+# 如果你完全关闭了终端窗口，重新SSH登录到服务器后：
+# 1. 列出所有screen会话
 screen -ls
+# 输出示例：
+# There is a screen on:
+#     12345.terraform  (Detached)
+# 1 Socket in /var/run/screen/S-ec2-user.
 
-# 终止screen会话
+# 2. 重新连接到已存在的会话
+screen -r 12345.terraform  # 或简单地 screen -r terraform
+
+# 如果有多个会话且名称相似，需要使用完整的会话ID
+screen -r 12345
+
+# 终止/删除screen会话
+
+# 方法1：从会话内部终止
 exit  # 或按 Ctrl+D
+
+# 方法2：从外部删除特定会话（适用于会话卡住或无法正常终止的情况）
+screen -X -S [session-id] quit
+# 例如：screen -X -S terraform quit
+# 或：screen -X -S 12345.terraform quit
+
+# 方法3：删除所有分离(detached)的会话
+screen -wipe
+
+# 方法4：强制删除所有会话（包括attached状态的会话）
+pkill screen
+
+# 方法5：如果会话显示为"Attached"但实际上已经断开连接
+# 先强制分离
+screen -D terraform
+# 然后重新连接
+screen -r terraform
+# 最后正常退出
+exit
 ```
+
+**注意**：
+1. Screen会话在服务器重启后不会保留。如果需要在服务器重启后自动恢复会话，请考虑使用systemd服务方案。
+2. 删除会话会终止会话中运行的所有进程，确保在删除前保存重要的输出信息。
 
 ### 方案二：使用 Tmux
 
