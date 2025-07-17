@@ -89,7 +89,6 @@ cd aws-tf-for-dify
 
 # 复制配置文件
 cp terraform.tfvars.example terraform.tfvars
-cp .env.example .env
 ```
 
 ### 2. 配置变量
@@ -221,7 +220,7 @@ aws-auth ConfigMap 是 EKS 集群中的关键组件，用于控制哪些 IAM 实
 #### 通过 AWS 控制台查看
 
 AWS 控制台没有直接查看 ConfigMap 的界面，但可以通过以下步骤访问：
-
+s
 1. 登录 AWS 控制台
 2. 导航到 EKS 服务
 3. 选择您的集群

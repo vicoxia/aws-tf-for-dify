@@ -8,10 +8,6 @@
 crash.log
 crash.*.log
 
-# Environment files
-.env
-!.env.example
-
 # IDE files
 .vscode/
 .idea/
