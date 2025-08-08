@@ -246,6 +246,11 @@ psql --version
 
 #### Linux安装
 ```bash
+#amazon linux 2023
+sudo dnf search postgresql
+#找到相应版本以后运行，以下为graviton示例
+sudo yum install postgresql17.aarch64
+
 # Ubuntu/Debian
 sudo apt update && sudo apt install postgresql-client
 
