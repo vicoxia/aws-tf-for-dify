@@ -95,15 +95,21 @@
   - 启用服务器端加密
   - 阻止公共访问
 
-- **ECR仓库**: 用于存储Dify应用的Docker镜像
+- **ECR仓库**: 
+  - **主应用仓库**: 存储Dify应用的Docker镜像
+  - **EE插件仓库**: 存储Dify EE插件镜像
   - 启用镜像扫描
-  - 生命周期策略保留最新的10个镜像
+  - 生命周期策略（主应用保留10个镜像，插件保留20个镜像）
 
 ### 安全与访问控制
 - 为每个服务配置了专用安全组
 - EKS集群使用IAM角色进行权限管理
 - 使用OIDC提供商实现Kubernetes服务账户与AWS IAM的集成
-- S3访问使用IRSA(IAM Roles for Service Accounts)
+- **Dify EE IRSA角色**:
+  - `DifyEE-Role-{cluster}-s3`: S3访问权限（用于dify-api）
+  - `DifyEE-Role-{cluster}-s3-ecr`: S3+ECR完整访问权限（用于dify-plugin-crd）
+  - `DifyEE-Role-{cluster}-ecr-image-pull`: ECR镜像拉取权限（用于dify-plugin-runner）
+- **Kubernetes ServiceAccounts**: 自动创建并配置IRSA注解
 
 ### 环境配置
 - 支持测试(test)和生产(prod)两种环境
