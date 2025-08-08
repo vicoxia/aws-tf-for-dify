@@ -913,6 +913,237 @@ aws eks update-nodegroup-config \
   --region $AWS_REGION
 ```
 
+## 🗑️ 资源清理与删除
+
+### 完全删除部署
+
+如果需要完全删除Dify企业版部署和所有AWS资源，请按以下步骤操作：
+
+#### ⚠️ 重要警告
+- **数据丢失**: 删除操作将永久删除所有数据，包括数据库、文件存储等
+- **不可逆**: 删除操作无法撤销，请确保已备份重要数据
+- **费用影响**: 删除后将停止产生AWS费用，但已产生的费用仍需支付
+
+#### 1. 备份重要数据（可选但推荐）
+
+```bash
+# 备份数据库
+DB_ENDPOINT=$(terraform output -raw aurora_cluster_endpoint)
+PGPASSWORD=$TF_VAR_rds_password pg_dump -h $DB_ENDPOINT -U $TF_VAR_rds_username dify > dify_backup.sql
+PGPASSWORD=$TF_VAR_rds_password pg_dump -h $DB_ENDPOINT -U $TF_VAR_rds_username dify_plugin_daemon > plugin_daemon_backup.sql
+PGPASSWORD=$TF_VAR_rds_password pg_dump -h $DB_ENDPOINT -U $TF_VAR_rds_username dify_enterprise > enterprise_backup.sql
+PGPASSWORD=$TF_VAR_rds_password pg_dump -h $DB_ENDPOINT -U $TF_VAR_rds_username dify_audit > audit_backup.sql
+
+# 备份S3数据
+S3_BUCKET=$(terraform output -raw s3_bucket_name)
+aws s3 sync s3://$S3_BUCKET ./s3_backup/
+
+# 备份Kubernetes配置
+kubectl get all -n dify -o yaml > dify_k8s_backup.yaml
+helm get values dify -n dify > dify_helm_values_backup.yaml
+```
+
+#### 2. 删除Helm部署
+
+```bash
+# 删除Dify应用
+helm uninstall dify -n dify
+
+# 删除其他Helm releases（如果安装了）
+helm uninstall aws-load-balancer-controller -n kube-system
+helm uninstall nginx-ingress -n ingress-nginx
+helm uninstall cert-manager -n cert-manager
+helm uninstall kube-prometheus-stack -n monitoring
+
+# 删除命名空间
+kubectl delete namespace dify
+kubectl delete namespace ingress-nginx
+kubectl delete namespace cert-manager
+kubectl delete namespace monitoring
+```
+
+#### 3. 执行Terraform销毁
+
+```bash
+# 进入terraform目录
+cd tf
+
+# 生成销毁计划（可选，用于预览将要删除的资源）
+terraform plan -destroy -out=destroy.tfplan
+
+# 查看销毁计划
+terraform show destroy.tfplan
+
+# 执行销毁操作
+terraform destroy
+
+# 或者使用计划文件
+terraform apply destroy.tfplan
+```
+
+#### 4. 销毁过程说明
+
+Terraform将按以下顺序删除资源：
+
+1. **Helm Releases** (~2-3分钟)
+   - Dify应用和相关组件
+
+2. **Kubernetes资源** (~2-3分钟)
+   - ServiceAccounts、ConfigMaps、Secrets等
+
+3. **EKS集群** (~10-15分钟)
+   - 节点组、集群控制平面
+
+4. **数据库和缓存** (~5-10分钟)
+   - Aurora集群、ElastiCache集群
+
+5. **网络资源** (~5-10分钟)
+   - VPC、子网、路由表、NAT网关等
+
+6. **存储和其他资源** (~2-5分钟)
+   - S3存储桶、ECR仓库、IAM角色等
+
+**总预计时间**: 25-45分钟
+
+#### 5. 验证删除完成
+
+```bash
+# 检查terraform状态
+terraform state list
+
+# 检查AWS资源（应该返回空或错误）
+aws eks describe-cluster --name $(terraform output -raw eks_cluster_name) --region $AWS_REGION
+aws rds describe-db-clusters --db-cluster-identifier $(terraform output -raw aurora_cluster_endpoint | cut -d'.' -f1)
+
+# 检查S3存储桶
+aws s3 ls | grep $(terraform output -raw s3_bucket_name)
+```
+
+#### 6. 手动清理（如果需要）
+
+如果terraform destroy失败或有残留资源，可能需要手动清理：
+
+```bash
+# 清理ECR镜像
+aws ecr list-images --repository-name $(terraform output -raw ecr_repository_name) --region $AWS_REGION
+aws ecr batch-delete-image --repository-name $(terraform output -raw ecr_repository_name) --image-ids imageTag=latest
+
+# 清理S3存储桶内容
+aws s3 rm s3://$(terraform output -raw s3_bucket_name) --recursive
+
+# 清理CloudWatch日志组
+aws logs describe-log-groups --log-group-name-prefix "/aws/eks/$(terraform output -raw eks_cluster_name)"
+aws logs delete-log-group --log-group-name "/aws/eks/$(terraform output -raw eks_cluster_name)/cluster"
+```
+
+### 部分删除场景
+
+#### 只删除应用，保留基础设施
+
+```bash
+# 只删除Helm部署
+helm uninstall dify -n dify
+
+# 保留EKS集群和其他AWS资源
+# 这样可以重新部署应用而不需要重建基础设施
+```
+
+#### 删除特定组件
+
+```bash
+# 删除特定的terraform资源
+terraform destroy -target=helm_release.dify
+terraform destroy -target=aws_opensearch_domain.main
+```
+
+### 成本优化删除
+
+#### 临时停止（测试环境）
+
+```bash
+# 缩减EKS节点组到0（停止计算费用）
+aws eks update-nodegroup-config \
+  --cluster-name $(terraform output -raw eks_cluster_name) \
+  --nodegroup-name $(terraform output -raw eks_nodegroup_name) \
+  --scaling-config minSize=0,maxSize=0,desiredSize=0 \
+  --region $AWS_REGION
+
+# 停止Aurora集群（保留数据）
+aws rds stop-db-cluster --db-cluster-identifier $(terraform output -raw aurora_cluster_endpoint | cut -d'.' -f1)
+```
+
+#### 恢复服务
+
+```bash
+# 恢复EKS节点组
+aws eks update-nodegroup-config \
+  --cluster-name $(terraform output -raw eks_cluster_name) \
+  --nodegroup-name $(terraform output -raw eks_nodegroup_name) \
+  --scaling-config minSize=1,maxSize=3,desiredSize=1 \
+  --region $AWS_REGION
+
+# 启动Aurora集群
+aws rds start-db-cluster --db-cluster-identifier $(terraform output -raw aurora_cluster_endpoint | cut -d'.' -f1)
+```
+
+### 删除故障排除
+
+#### 常见删除问题
+
+1. **VPC删除失败**
+   ```bash
+   # 检查是否有残留的网络接口
+   aws ec2 describe-network-interfaces --filters "Name=vpc-id,Values=$(terraform output -raw vpc_id)"
+   
+   # 手动删除网络接口
+   aws ec2 delete-network-interface --network-interface-id <interface-id>
+   ```
+
+2. **S3存储桶删除失败**
+   ```bash
+   # 清空存储桶内容
+   aws s3 rm s3://$(terraform output -raw s3_bucket_name) --recursive
+   
+   # 删除存储桶版本
+   aws s3api delete-bucket --bucket $(terraform output -raw s3_bucket_name)
+   ```
+
+3. **IAM角色删除失败**
+   ```bash
+   # 分离策略
+   aws iam list-attached-role-policies --role-name <role-name>
+   aws iam detach-role-policy --role-name <role-name> --policy-arn <policy-arn>
+   
+   # 删除角色
+   aws iam delete-role --role-name <role-name>
+   ```
+
+#### 强制删除
+
+```bash
+# 如果terraform destroy卡住，可以强制删除
+terraform destroy -auto-approve -parallelism=20
+
+# 或者删除terraform状态（谨慎使用）
+terraform state rm <resource-name>
+```
+
+### 删除后清理
+
+```bash
+# 清理本地terraform状态
+rm -rf .terraform/
+rm terraform.tfstate*
+rm tfplan destroy.tfplan
+
+# 清理kubectl配置
+kubectl config delete-context $(kubectl config current-context)
+kubectl config delete-cluster $(terraform output -raw eks_cluster_name)
+
+# 清理Helm仓库
+helm repo remove dify
+```
+
 ## 📞 支持与帮助
 
 ### 官方资源

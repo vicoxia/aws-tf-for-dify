@@ -76,6 +76,17 @@ terraform apply
 - **[tf/DIFY_EE_UPGRADE_COMPLIANCE.md](tf/DIFY_EE_UPGRADE_COMPLIANCE.md)** - 升级指南合规性检查
 - **[tf/validate_config.sh](tf/validate_config.sh)** - 配置验证脚本
 
+## 🗑️ 资源清理
+
+如需删除部署的所有AWS资源：
+
+```bash
+cd tf
+terraform destroy
+```
+
+⚠️ **警告**: 此操作将永久删除所有数据，请先备份重要信息。详细的删除指南请参考[完整部署指南](DIFY_ENTERPRISE_DEPLOYMENT_GUIDE.md#资源清理与删除)。
+
 ## 🆘 支持
 
 如遇到问题，请：
