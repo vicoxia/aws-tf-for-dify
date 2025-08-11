@@ -100,33 +100,12 @@ terraform apply -auto-approve
 
 ### 阶段三：部署Dify应用
 
-#### 方式A: 使用自动生成的部署脚本（推荐）
-```bash
-# 1. 修改域名和密钥（必需）
-sed -i 's/dify.local/your-domain.com/g' dify_values_*.yaml
-sed -i 's/dify123456/your-secure-key/g' dify_values_*.yaml
+基础设施验证通过并生成配置文件后，请参考以下文档部署Dify应用：
 
-# 2. 运行自动部署脚本
-./deploy_dify_*.sh
-```
+- **测试环境部署**: [additional_docs/测试环境部署.md](additional_docs/测试环境部署.md)
+- **生产环境部署**: [additional_docs/生产环境部署.md](additional_docs/生产环境部署.md)
 
-#### 方式B: 手动部署
-```bash
-# 1. 更新kubeconfig
-aws eks update-kubeconfig --region <region> --name <cluster-name>
-
-# 2. 添加Helm仓库
-helm repo add dify https://langgenius.github.io/dify-helm
-helm repo update
-
-# 3. 部署应用
-helm upgrade -i dify -f dify_values_*.yaml dify/dify -n dify
-
-# 4. 验证部署
-kubectl get pods -n dify
-kubectl get svc -n dify
-kubectl get ingress -n dify
-```
+这些文档包含详细的Helm部署步骤、配置说明和验证方法。
 
 ## 🔍 验证和故障排除
 
