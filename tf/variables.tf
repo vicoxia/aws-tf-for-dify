@@ -169,11 +169,7 @@ variable "vpc_cidr" {
   default     = "10.0.0.0/16"
 }
 
-variable "availability_zones" {
-  description = "Availability zones for VPC"
-  type        = list(string)
-  default     = ["us-west-2a", "us-west-2b", "us-west-2c"]
-}
+# availability_zones 已移除 - 现在自动从当前区域获取前3个可用区
 
 variable "private_subnet_ids" {
   description = "Private subnet IDs (for existing VPC)"
