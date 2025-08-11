@@ -61,37 +61,37 @@ output "dify_ee_ecr_pull_role_arn" {
 
 # ──────────────── Service Account Information ────────────────
 output "dify_ee_service_accounts_info" {
-  description = "Information for creating Dify EE ServiceAccounts"
+  description = "Information about created Dify EE ServiceAccounts"
   value = {
     dify_api = {
-      name      = "dify-api-sa"
-      namespace = "default"
+      name      = kubernetes_service_account.dify_api.metadata[0].name
+      namespace = kubernetes_service_account.dify_api.metadata[0].namespace
       role_arn  = aws_iam_role.dify_ee_s3_role.arn
     }
     dify_plugin_crd = {
-      name      = "dify-plugin-crd-sa"
-      namespace = "default"
+      name      = kubernetes_service_account.dify_plugin_crd.metadata[0].name
+      namespace = kubernetes_service_account.dify_plugin_crd.metadata[0].namespace
       role_arn  = aws_iam_role.dify_ee_s3_ecr_role.arn
     }
     dify_plugin_runner = {
-      name      = "dify-plugin-runner-sa"
-      namespace = "default"
+      name      = kubernetes_service_account.dify_plugin_runner.metadata[0].name
+      namespace = kubernetes_service_account.dify_plugin_runner.metadata[0].namespace
       role_arn  = aws_iam_role.dify_ee_ecr_pull_role.arn
     }
     dify_plugin_connector = {
-      name      = "dify-plugin-connector-sa"
-      namespace = "default"
+      name      = kubernetes_service_account.dify_plugin_connector.metadata[0].name
+      namespace = kubernetes_service_account.dify_plugin_connector.metadata[0].namespace
       role_arn  = aws_iam_role.dify_ee_s3_role.arn
     }
     # Alternative names for compatibility with upgrade guide
     dify_plugin_build = {
-      name      = "dify-plugin-build-sa"
-      namespace = "default"
+      name      = kubernetes_service_account.dify_plugin_build.metadata[0].name
+      namespace = kubernetes_service_account.dify_plugin_build.metadata[0].namespace
       role_arn  = aws_iam_role.dify_ee_s3_ecr_role.arn
     }
     dify_plugin_build_run = {
-      name      = "dify-plugin-build-run-sa"
-      namespace = "default"
+      name      = kubernetes_service_account.dify_plugin_build_run.metadata[0].name
+      namespace = kubernetes_service_account.dify_plugin_build_run.metadata[0].namespace
       role_arn  = aws_iam_role.dify_ee_ecr_pull_role.arn
     }
   }
@@ -120,31 +120,14 @@ output "helm_releases_status" {
       status    = var.install_cert_manager ? "deployed" : "not_installed"
     } : null
     
-    dify = var.install_dify_chart ? {
-      name      = "dify"
-      namespace = var.dify_namespace
-      status    = var.install_dify_chart ? "deployed" : "not_installed"
-      hostname  = var.dify_hostname
-    } : null
-    
 
     
-    monitoring_stack = var.install_monitoring_stack ? {
-      name      = "kube-prometheus-stack"
-      namespace = "monitoring"
-      status    = var.install_monitoring_stack ? "deployed" : "not_installed"
-    } : null
+
+
   }
 }
 
-output "dify_application_urls" {
-  description = "URLs for accessing Dify application"
-  value = var.install_dify_chart ? {
-    hostname = var.dify_hostname
-    protocol = var.dify_tls_enabled ? "https" : "http"
-    url      = "${var.dify_tls_enabled ? "https" : "http"}://${var.dify_hostname}"
-  } : null
-}
+
 
 output "rds_endpoint" {
   description = "Aurora PostgreSQL endpoint"

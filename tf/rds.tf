@@ -13,18 +13,18 @@ locals {
 
 # RDS Subnet Group (可以用于Aurora)
 resource "aws_db_subnet_group" "main" {
-  name       = "dify-${var.environment}-db-subnet-group"
+  name       = "${var.cluster_name}-db-subnet-group"
   subnet_ids = local.rds_subnets
 
   tags = {
-    Name        = "dify-${var.environment}-db-subnet-group"
+    Name        = "${var.cluster_name}-db-subnet-group"
     Environment = var.environment
   }
 }
 
 # RDS Security Group (可以用于Aurora)
 resource "aws_security_group" "rds" {
-  name_prefix = "dify-${var.environment}-rds-"
+  name_prefix = "${var.cluster_name}-rds-"
   vpc_id      = local.vpc_id
 
   ingress {
@@ -42,26 +42,26 @@ resource "aws_security_group" "rds" {
   }
 
   tags = {
-    Name        = "dify-${var.environment}-rds-sg"
+    Name        = "${var.cluster_name}-rds-sg"
     Environment = var.environment
   }
 }
 
 # Aurora Serverless v2 Cluster
 resource "aws_rds_cluster" "main" {
-  cluster_identifier      = "dify-${var.environment}-aurora-postgres"
+  cluster_identifier      = "${var.cluster_name}-aurora-postgres"
   engine                  = "aurora-postgresql"
   engine_mode             = "provisioned"  # 对于Serverless v2，使用provisioned模式
   engine_version          = "17.5"         # 使用最新的Aurora PostgreSQL 17.5版本
   database_name           = "dify"
-  master_username         = var.rds_username
-  master_password         = var.rds_password
+  master_username         = "postgres"
+  master_password         = "DifyRdsPassword123!"  # 请修改为您的密码
   db_subnet_group_name    = aws_db_subnet_group.main.name
   vpc_security_group_ids  = [aws_security_group.rds.id]
   
   skip_final_snapshot     = true
-  backup_retention_period = var.environment == "prod" ? 7 : 1
-  preferred_backup_window = "03:00-04:00"
+  backup_retention_period = var.db_backup_retention_period
+  preferred_backup_window = var.db_backup_window
   preferred_maintenance_window = "sun:04:00-sun:05:00"
   
   # 启用存储加密
@@ -74,22 +74,22 @@ resource "aws_rds_cluster" "main" {
   }
   
   tags = {
-    Name        = "dify-${var.environment}-aurora-postgres"
+    Name        = "${var.cluster_name}-aurora-postgres"
     Environment = var.environment
   }
 }
 
 # Aurora Serverless v2 实例
 resource "aws_rds_cluster_instance" "main" {
-  identifier          = "dify-${var.environment}-aurora-postgres-instance"
+  identifier          = "${var.cluster_name}-aurora-postgres-instance"
   cluster_identifier  = aws_rds_cluster.main.id
-  instance_class      = "db.serverless"  # 使用serverless实例类型
+  instance_class      = var.db_instance_class
   engine              = aws_rds_cluster.main.engine
   engine_version      = aws_rds_cluster.main.engine_version
   publicly_accessible = var.rds_public_accessible
   
   tags = {
-    Name        = "dify-${var.environment}-aurora-postgres-instance"
+    Name        = "${var.cluster_name}-aurora-postgres-instance"
     Environment = var.environment
   }
 }

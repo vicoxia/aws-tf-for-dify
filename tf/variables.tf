@@ -54,30 +54,8 @@ variable "opensearch_subnets" {
   default     = []
 }
 
-variable "opensearch_admin_name" {
-  description = "OpenSearch master username"
-  type        = string
-  default     = "admin"
-}
-
-variable "opensearch_password" {
-  description = "OpenSearch master password"
-  type        = string
-  sensitive   = true
-}
-
-variable "rds_username" {
-  description = "RDS master username"
-  type        = string
-  default     = "postgres"
-}
-
-variable "rds_password" {
-  description = "RDS master password"
-  type        = string
-  sensitive   = true
-  default     = "postgres@123!"
-}
+# RDS和OpenSearch密码现在直接在相应的.tf文件中硬编码
+# 不再需要这些变量，密码直接在rds.tf和opensearch.tf中设置
 
 variable "rds_public_accessible" {
   description = "Make RDS publicly accessible"
@@ -138,118 +116,162 @@ variable "cert_manager_version" {
   default     = "v1.13.2"
 }
 
-# Dify Application
-variable "install_dify_chart" {
-  description = "Install Dify application via Helm chart"
+# ──────────────── Infrastructure Configuration ────────────────
+
+# Cluster Configuration
+variable "cluster_name" {
+  description = "EKS cluster name"
+  type        = string
+  default     = "dify-eks-cluster"
+}
+
+variable "cluster_version" {
+  description = "EKS cluster version"
+  type        = string
+  default     = "1.28"
+}
+
+# Node Group Configuration
+variable "node_group_instance_types" {
+  description = "Instance types for EKS node group"
+  type        = list(string)
+  default     = ["t3.large"]
+}
+
+variable "node_group_desired_size" {
+  description = "Desired number of nodes in the node group"
+  type        = number
+  default     = 2
+}
+
+variable "node_group_max_size" {
+  description = "Maximum number of nodes in the node group"
+  type        = number
+  default     = 4
+}
+
+variable "node_group_min_size" {
+  description = "Minimum number of nodes in the node group"
+  type        = number
+  default     = 1
+}
+
+# VPC Configuration
+variable "use_existing_vpc" {
+  description = "Whether to use an existing VPC"
   type        = bool
   default     = false
 }
 
-variable "dify_helm_repo_url" {
-  description = "Dify Helm chart repository URL"
+variable "vpc_cidr" {
+  description = "CIDR block for VPC"
   type        = string
-  default     = "https://charts.dify.ai"
+  default     = "10.0.0.0/16"
 }
 
-variable "dify_helm_chart_name" {
-  description = "Dify Helm chart name"
+variable "availability_zones" {
+  description = "Availability zones for VPC"
+  type        = list(string)
+  default     = ["us-west-2a", "us-west-2b", "us-west-2c"]
+}
+
+variable "private_subnet_ids" {
+  description = "Private subnet IDs (for existing VPC)"
+  type        = list(string)
+  default     = []
+}
+
+variable "public_subnet_ids" {
+  description = "Public subnet IDs (for existing VPC)"
+  type        = list(string)
+  default     = []
+}
+
+# Database Configuration
+variable "db_instance_class" {
+  description = "RDS instance class"
+  type        = string
+  default     = "db.r6g.large"
+}
+
+variable "db_allocated_storage" {
+  description = "RDS allocated storage in GB"
+  type        = number
+  default     = 100
+}
+
+variable "db_backup_retention_period" {
+  description = "RDS backup retention period in days"
+  type        = number
+  default     = 7
+}
+
+variable "db_backup_window" {
+  description = "RDS backup window"
+  type        = string
+  default     = "03:00-04:00"
+}
+
+# Redis Configuration
+variable "redis_node_type" {
+  description = "ElastiCache Redis node type"
+  type        = string
+  default     = "cache.r6g.large"
+}
+
+variable "redis_num_cache_nodes" {
+  description = "Number of cache nodes"
+  type        = number
+  default     = 1
+}
+
+variable "redis_parameter_group_name" {
+  description = "Redis parameter group name"
+  type        = string
+  default     = "default.redis7"
+}
+
+# OpenSearch Configuration
+variable "opensearch_instance_type" {
+  description = "OpenSearch instance type"
+  type        = string
+  default     = "t3.small.search"
+}
+
+variable "opensearch_instance_count" {
+  description = "Number of OpenSearch instances"
+  type        = number
+  default     = 1
+}
+
+variable "opensearch_ebs_volume_size" {
+  description = "OpenSearch EBS volume size in GB"
+  type        = number
+  default     = 20
+}
+
+# Storage Configuration
+variable "s3_bucket_name" {
+  description = "S3 bucket name (will have random suffix added)"
+  type        = string
+  default     = "dify-storage"
+}
+
+variable "s3_versioning_enabled" {
+  description = "Enable S3 versioning"
+  type        = bool
+  default     = true
+}
+
+# ECR Configuration
+variable "ecr_repository_name" {
+  description = "ECR repository name"
   type        = string
   default     = "dify"
 }
 
-variable "dify_helm_chart_version" {
-  description = "Dify Helm chart version"
+variable "ecr_image_tag_mutability" {
+  description = "ECR image tag mutability"
   type        = string
-  default     = "latest"
-}
-
-variable "dify_image_tag" {
-  description = "Dify application image tag"
-  type        = string
-  default     = "latest"
-}
-
-variable "dify_hostname" {
-  description = "Hostname for Dify application"
-  type        = string
-  default     = "dify.example.com"
-}
-
-variable "dify_ingress_enabled" {
-  description = "Enable ingress for Dify application"
-  type        = bool
-  default     = true
-}
-
-variable "dify_ingress_class" {
-  description = "Ingress class for Dify application"
-  type        = string
-  default     = "alb"
-}
-
-variable "dify_tls_enabled" {
-  description = "Enable TLS for Dify application"
-  type        = bool
-  default     = true
-}
-
-
-
-# Monitoring Stack
-variable "install_monitoring_stack" {
-  description = "Install Prometheus and Grafana monitoring stack"
-  type        = bool
-  default     = false
-}
-
-variable "prometheus_stack_version" {
-  description = "Prometheus stack Helm chart version"
-  type        = string
-  default     = "54.0.1"
-}
-
-# ──────────────── Dify EE Plugin Configuration ────────────────
-
-variable "dify_plugin_api_key" {
-  description = "API key for Dify plugin daemon and connector"
-  type        = string
-  default     = "dify123456"
-  sensitive   = true
-}
-
-variable "dify_plugin_inner_api_key" {
-  description = "Inner API key for Dify plugin daemon"
-  type        = string
-  default     = "QaHbTe77CtuXmsfyhR7+vRjI/+XbV1AaFy691iy+kGDv2Jvy0/eAh8Y1"
-  sensitive   = true
-}
-
-variable "dify_app_secret_key" {
-  description = "Secret key for Dify application"
-  type        = string
-  sensitive   = true
-}
-
-variable "dify_admin_api_secret_key_salt" {
-  description = "Secret key salt for Dify admin APIs"
-  type        = string
-  sensitive   = true
-}
-
-variable "dify_sandbox_api_key" {
-  description = "API key for Dify sandbox service"
-  type        = string
-  sensitive   = true
-}
-
-variable "dify_inner_api_key" {
-  description = "Inner API key for Dify API service"
-  type        = string
-  sensitive   = true
-}
-
-variable "create_plugin_daemon_database" {
-  description = "Create dify_plugin_daemon database"
-  type        = bool
-  default     = true
+  default     = "MUTABLE"
 }

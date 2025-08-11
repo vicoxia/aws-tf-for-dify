@@ -15,7 +15,7 @@ locals {
 
 # OpenSearch Security Group
 resource "aws_security_group" "opensearch" {
-  name_prefix = "dify-${var.environment}-opensearch-"
+  name_prefix = "${var.cluster_name}-opensearch-"
   vpc_id      = local.vpc_id
 
   ingress {
@@ -40,29 +40,29 @@ resource "aws_security_group" "opensearch" {
   }
 
   tags = {
-    Name        = "dify-${var.environment}-opensearch-sg"
+    Name        = "${var.cluster_name}-opensearch-sg"
     Environment = var.environment
   }
 }
 
 # OpenSearch Domain
 resource "aws_opensearch_domain" "main" {
-  domain_name    = "dify-${var.environment}-opensearch"
+  domain_name    = "${var.cluster_name}-opensearch"
   engine_version = "OpenSearch_2.19"
 
   cluster_config {
-    instance_type  = local.opensearch_config.instance_type
-    instance_count = local.opensearch_config.instance_count
+    instance_type  = var.opensearch_instance_type
+    instance_count = var.opensearch_instance_count
   }
 
   ebs_options {
     ebs_enabled = true
     volume_type = "gp3"
-    volume_size = local.opensearch_config.ebs_volume_size
+    volume_size = var.opensearch_ebs_volume_size
   }
 
   vpc_options {
-    subnet_ids         = slice(local.opensearch_subnets, 0, min(length(local.opensearch_subnets), local.opensearch_config.instance_count))
+    subnet_ids         = slice(local.opensearch_subnets, 0, min(length(local.opensearch_subnets), var.opensearch_instance_count))
     security_group_ids = [aws_security_group.opensearch.id]
   }
 
@@ -84,8 +84,8 @@ resource "aws_opensearch_domain" "main" {
     anonymous_auth_enabled         = false
     internal_user_database_enabled = true
     master_user_options {
-      master_user_name     = var.opensearch_admin_name
-      master_user_password = var.opensearch_password
+      master_user_name     = "admin"
+      master_user_password = "DifyOpenSearchPass123!"  # 请修改为您的密码
     }
   }
 
@@ -104,7 +104,7 @@ resource "aws_opensearch_domain" "main" {
   })
 
   tags = {
-    Name        = "dify-${var.environment}-opensearch"
+    Name        = "${var.cluster_name}-opensearch"
     Environment = var.environment
   }
 }

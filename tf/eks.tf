@@ -1,24 +1,11 @@
 locals {
   cluster_subnets = length(var.eks_cluster_subnets) > 0 ? var.eks_cluster_subnets : (local.create_vpc ? aws_subnet.private[*].id : [])
   node_subnets    = length(var.eks_nodes_subnets) > 0 ? var.eks_nodes_subnets : (local.create_vpc ? aws_subnet.private[*].id : [])
-  
-  # Environment-specific configurations
-  node_config = var.environment == "test" ? {
-    desired_size = 1
-    max_size     = 2
-    min_size     = 1
-    instance_types = ["m7g.xlarge"]  # 4 vCPU, 16 GB RAM (Graviton)
-  } : {
-    desired_size = 6
-    max_size     = 8
-    min_size     = 6
-    instance_types = ["m7g.2xlarge"]  # 8 vCPU, 32 GB RAM (Graviton)
-  }
 }
 
 # EKS Cluster IAM Role
 resource "aws_iam_role" "eks_cluster" {
-  name = "dify-${var.environment}-eks-cluster-role"
+  name = "${var.cluster_name}-cluster-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -41,7 +28,7 @@ resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
 
 # EKS Node Group IAM Role
 resource "aws_iam_role" "eks_node_group" {
-  name = "dify-${var.environment}-eks-node-group-role"
+  name = "${var.cluster_name}-node-group-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -74,9 +61,9 @@ resource "aws_iam_role_policy_attachment" "eks_container_registry_policy" {
 
 # EKS Cluster
 resource "aws_eks_cluster" "main" {
-  name     = "dify-${var.environment}-cluster"
+  name     = var.cluster_name
   role_arn = aws_iam_role.eks_cluster.arn
-  version  = "1.33"
+  version  = var.cluster_version
 
   vpc_config {
     subnet_ids = local.cluster_subnets
@@ -87,14 +74,14 @@ resource "aws_eks_cluster" "main" {
   ]
 
   tags = {
-    Name        = "dify-${var.environment}-cluster"
+    Name        = var.cluster_name
     Environment = var.environment
   }
 }
 
 # EKS Nodes Security Group
 resource "aws_security_group" "eks_nodes" {
-  name_prefix = "dify-${var.environment}-eks-nodes-"
+  name_prefix = "${var.cluster_name}-nodes-"
   vpc_id      = local.vpc_id
 
   ingress {
@@ -126,7 +113,7 @@ resource "aws_security_group" "eks_nodes" {
   }
 
   tags = {
-    Name        = "dify-${var.environment}-eks-nodes-sg"
+    Name        = "${var.cluster_name}-nodes-sg"
     Environment = var.environment
   }
 }
@@ -134,18 +121,18 @@ resource "aws_security_group" "eks_nodes" {
 # EKS Node Group
 resource "aws_eks_node_group" "main" {
   cluster_name    = aws_eks_cluster.main.name
-  node_group_name = "dify-${var.environment}-nodes"
+  node_group_name = "${var.cluster_name}-nodes"
   node_role_arn   = aws_iam_role.eks_node_group.arn
   subnet_ids      = local.node_subnets
 
   scaling_config {
-    desired_size = local.node_config.desired_size
-    max_size     = local.node_config.max_size
-    min_size     = local.node_config.min_size
+    desired_size = var.node_group_desired_size
+    max_size     = var.node_group_max_size
+    min_size     = var.node_group_min_size
   }
 
-  instance_types = local.node_config.instance_types
-  ami_type       = "AL2023_ARM_64_STANDARD"  # 指定与 Graviton 处理器兼容的 ARM AMI
+  instance_types = var.node_group_instance_types
+  ami_type       = "AL2_x86_64"  # 使用标准的x86 AMI
 
   depends_on = [
     aws_iam_role_policy_attachment.eks_worker_node_policy,
@@ -154,7 +141,7 @@ resource "aws_eks_node_group" "main" {
   ]
 
   tags = {
-    Name        = "dify-${var.environment}-nodes"
+    Name        = "${var.cluster_name}-nodes"
     Environment = var.environment
   }
 }

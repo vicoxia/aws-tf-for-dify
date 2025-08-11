@@ -1,10 +1,34 @@
-# ──────────────── Kubernetes ServiceAccounts for Dify EE ────────────────
+# ──────────────── Kubernetes资源配置 ────────────────
+# 
+# 此文件创建Dify应用所需的Kubernetes资源，包括：
+# - Dify命名空间
+# - IRSA ServiceAccounts（替代 irsa_one_click.sh 脚本的功能）
+#
+
+# Create namespace for Dify application
+resource "kubernetes_namespace" "dify" {
+  metadata {
+    name = var.dify_namespace
+    labels = {
+      "app.kubernetes.io/name"       = "dify"
+      "app.kubernetes.io/managed-by" = "terraform"
+    }
+  }
+
+  depends_on = [aws_eks_cluster.main]
+}
+
+# ──────────────── IRSA ServiceAccounts ────────────────
+# 
+# 以下ServiceAccounts替代了 irsa_one_click.sh 脚本的功能
+# 为Dify应用提供AWS资源访问权限
+#
 
 # ServiceAccount for dify-api (S3 access only)
 resource "kubernetes_service_account" "dify_api" {
   metadata {
     name      = "dify-api-sa"
-    namespace = "default"
+    namespace = kubernetes_namespace.dify.metadata[0].name
     annotations = {
       "eks.amazonaws.com/role-arn" = aws_iam_role.dify_ee_s3_role.arn
     }
@@ -18,7 +42,8 @@ resource "kubernetes_service_account" "dify_api" {
 
   depends_on = [
     aws_eks_cluster.main,
-    aws_iam_role.dify_ee_s3_role
+    aws_iam_role.dify_ee_s3_role,
+    kubernetes_namespace.dify
   ]
 }
 
@@ -26,7 +51,7 @@ resource "kubernetes_service_account" "dify_api" {
 resource "kubernetes_service_account" "dify_plugin_crd" {
   metadata {
     name      = "dify-plugin-crd-sa"
-    namespace = "default"
+    namespace = kubernetes_namespace.dify.metadata[0].name
     annotations = {
       "eks.amazonaws.com/role-arn" = aws_iam_role.dify_ee_s3_ecr_role.arn
     }
@@ -40,7 +65,8 @@ resource "kubernetes_service_account" "dify_plugin_crd" {
 
   depends_on = [
     aws_eks_cluster.main,
-    aws_iam_role.dify_ee_s3_ecr_role
+    aws_iam_role.dify_ee_s3_ecr_role,
+    kubernetes_namespace.dify
   ]
 }
 
@@ -48,7 +74,7 @@ resource "kubernetes_service_account" "dify_plugin_crd" {
 resource "kubernetes_service_account" "dify_plugin_runner" {
   metadata {
     name      = "dify-plugin-runner-sa"
-    namespace = "default"
+    namespace = kubernetes_namespace.dify.metadata[0].name
     annotations = {
       "eks.amazonaws.com/role-arn" = aws_iam_role.dify_ee_ecr_pull_role.arn
     }
@@ -62,7 +88,8 @@ resource "kubernetes_service_account" "dify_plugin_runner" {
 
   depends_on = [
     aws_eks_cluster.main,
-    aws_iam_role.dify_ee_ecr_pull_role
+    aws_iam_role.dify_ee_ecr_pull_role,
+    kubernetes_namespace.dify
   ]
 }
 
@@ -70,7 +97,7 @@ resource "kubernetes_service_account" "dify_plugin_runner" {
 resource "kubernetes_service_account" "dify_plugin_connector" {
   metadata {
     name      = "dify-plugin-connector-sa"
-    namespace = "default"
+    namespace = kubernetes_namespace.dify.metadata[0].name
     annotations = {
       "eks.amazonaws.com/role-arn" = aws_iam_role.dify_ee_s3_role.arn
     }
@@ -84,7 +111,8 @@ resource "kubernetes_service_account" "dify_plugin_connector" {
 
   depends_on = [
     aws_eks_cluster.main,
-    aws_iam_role.dify_ee_s3_role
+    aws_iam_role.dify_ee_s3_role,
+    kubernetes_namespace.dify
   ]
 }
 
@@ -94,7 +122,7 @@ resource "kubernetes_service_account" "dify_plugin_connector" {
 resource "kubernetes_service_account" "dify_plugin_build" {
   metadata {
     name      = "dify-plugin-build-sa"
-    namespace = "default"
+    namespace = kubernetes_namespace.dify.metadata[0].name
     annotations = {
       "eks.amazonaws.com/role-arn" = aws_iam_role.dify_ee_s3_ecr_role.arn
     }
@@ -108,14 +136,15 @@ resource "kubernetes_service_account" "dify_plugin_build" {
 
   depends_on = [
     aws_eks_cluster.main,
-    aws_iam_role.dify_ee_s3_ecr_role
+    aws_iam_role.dify_ee_s3_ecr_role,
+    kubernetes_namespace.dify
   ]
 }
 
 resource "kubernetes_service_account" "dify_plugin_build_run" {
   metadata {
     name      = "dify-plugin-build-run-sa"
-    namespace = "default"
+    namespace = kubernetes_namespace.dify.metadata[0].name
     annotations = {
       "eks.amazonaws.com/role-arn" = aws_iam_role.dify_ee_ecr_pull_role.arn
     }
@@ -129,7 +158,8 @@ resource "kubernetes_service_account" "dify_plugin_build_run" {
 
   depends_on = [
     aws_eks_cluster.main,
-    aws_iam_role.dify_ee_ecr_pull_role
+    aws_iam_role.dify_ee_ecr_pull_role,
+    kubernetes_namespace.dify
   ]
 }
 
