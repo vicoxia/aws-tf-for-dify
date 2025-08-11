@@ -131,30 +131,10 @@ variable "cluster_version" {
   default     = "1.28"
 }
 
-# Node Group Configuration
-variable "node_group_instance_types" {
-  description = "Instance types for EKS node group"
-  type        = list(string)
-  default     = ["t3.large"]
-}
-
-variable "node_group_desired_size" {
-  description = "Desired number of nodes in the node group"
-  type        = number
-  default     = 2
-}
-
-variable "node_group_max_size" {
-  description = "Maximum number of nodes in the node group"
-  type        = number
-  default     = 4
-}
-
-variable "node_group_min_size" {
-  description = "Minimum number of nodes in the node group"
-  type        = number
-  default     = 1
-}
+# Node Group Configuration (环境自动配置)
+# 节点配置根据环境自动设置：
+# - test环境：1个节点，m7g.xlarge (4 vCPU, 16 GB RAM, Graviton3)
+# - prod环境：6个节点，m7g.2xlarge (8 vCPU, 32 GB RAM, Graviton3)
 
 # VPC Configuration
 variable "use_existing_vpc" {

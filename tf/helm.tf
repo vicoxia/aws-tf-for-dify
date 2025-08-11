@@ -15,6 +15,9 @@ resource "helm_release" "aws_load_balancer_controller" {
   chart      = "aws-load-balancer-controller"
   version    = var.aws_load_balancer_controller_version
   namespace  = "kube-system"
+  
+  timeout = 600  # 10分钟超时
+  wait    = true
 
   set {
     name  = "clusterName"
@@ -48,7 +51,9 @@ resource "helm_release" "aws_load_balancer_controller" {
 
   depends_on = [
     aws_eks_cluster.main,
-    aws_iam_role.aws_load_balancer_controller
+    aws_eks_node_group.main,
+    aws_iam_role.aws_load_balancer_controller,
+    aws_iam_openid_connect_provider.eks
   ]
 }
 
@@ -133,6 +138,8 @@ resource "helm_release" "cert_manager" {
   namespace  = "cert-manager"
 
   create_namespace = true
+  timeout = 600  # 10分钟超时
+  wait    = true
 
   set {
     name  = "installCRDs"
@@ -144,6 +151,9 @@ resource "helm_release" "cert_manager" {
     value = "cert-manager"
   }
 
-  depends_on = [aws_eks_cluster.main]
+  depends_on = [
+    aws_eks_cluster.main,
+    aws_eks_node_group.main
+  ]
 }
 

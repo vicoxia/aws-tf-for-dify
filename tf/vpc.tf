@@ -62,24 +62,24 @@ resource "aws_subnet" "private" {
   }
 }
 
-# NAT Gateway
+# NAT Gateway (单个，所有私有子网共用)
 resource "aws_eip" "nat" {
-  count  = local.create_vpc ? length(local.availability_zones) : 0
+  count  = local.create_vpc ? 1 : 0
   domain = "vpc"
 
   tags = {
-    Name        = "${var.cluster_name}-nat-eip-${count.index + 1}"
+    Name        = "${var.cluster_name}-nat-eip"
     Environment = var.environment
   }
 }
 
 resource "aws_nat_gateway" "main" {
-  count         = local.create_vpc ? length(local.availability_zones) : 0
-  allocation_id = aws_eip.nat[count.index].id
-  subnet_id     = aws_subnet.public[count.index].id
+  count         = local.create_vpc ? 1 : 0
+  allocation_id = aws_eip.nat[0].id
+  subnet_id     = aws_subnet.public[0].id  # 使用第一个公有子网
 
   tags = {
-    Name        = "${var.cluster_name}-nat-${count.index + 1}"
+    Name        = "${var.cluster_name}-nat"
     Environment = var.environment
   }
 
@@ -103,16 +103,16 @@ resource "aws_route_table" "public" {
 }
 
 resource "aws_route_table" "private" {
-  count  = local.create_vpc ? length(local.availability_zones) : 0
+  count  = local.create_vpc ? 1 : 0
   vpc_id = aws_vpc.main[0].id
 
   route {
     cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.main[count.index].id
+    nat_gateway_id = aws_nat_gateway.main[0].id
   }
 
   tags = {
-    Name        = "${var.cluster_name}-private-rt-${count.index + 1}"
+    Name        = "${var.cluster_name}-private-rt"
     Environment = var.environment
   }
 }
@@ -127,5 +127,5 @@ resource "aws_route_table_association" "public" {
 resource "aws_route_table_association" "private" {
   count          = local.create_vpc ? length(local.availability_zones) : 0
   subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = aws_route_table.private[count.index].id
+  route_table_id = aws_route_table.private[0].id  # 所有私有子网使用同一个路由表
 }

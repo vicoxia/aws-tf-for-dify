@@ -1,6 +1,19 @@
 locals {
   cluster_subnets = length(var.eks_cluster_subnets) > 0 ? var.eks_cluster_subnets : (local.create_vpc ? aws_subnet.private[*].id : [])
   node_subnets    = length(var.eks_nodes_subnets) > 0 ? var.eks_nodes_subnets : (local.create_vpc ? aws_subnet.private[*].id : [])
+  
+  # 环境特定的节点配置 (使用最新Graviton3处理器)
+  node_config = var.environment == "test" ? {
+    instance_types  = ["m7g.xlarge"]    # 4 vCPU, 16 GB RAM (Graviton3)
+    desired_size    = 1                 # 1个工作节点
+    max_size        = 2                 # 最大2个节点
+    min_size        = 1                 # 最小1个节点
+  } : {
+    instance_types  = ["m7g.2xlarge"]   # 8 vCPU, 32 GB RAM (Graviton3)
+    desired_size    = 6                 # 6个工作节点
+    max_size        = 10                # 最大10个节点
+    min_size        = 6                 # 最小6个节点
+  }
 }
 
 # EKS Cluster IAM Role
@@ -126,13 +139,13 @@ resource "aws_eks_node_group" "main" {
   subnet_ids      = local.node_subnets
 
   scaling_config {
-    desired_size = var.node_group_desired_size
-    max_size     = var.node_group_max_size
-    min_size     = var.node_group_min_size
+    desired_size = local.node_config.desired_size
+    max_size     = local.node_config.max_size
+    min_size     = local.node_config.min_size
   }
 
-  instance_types = var.node_group_instance_types
-  ami_type       = "AL2_x86_64"  # 使用标准的x86 AMI
+  instance_types = local.node_config.instance_types
+  ami_type       = "AL2023_ARM64_STANDARD"  # 使用Amazon Linux 2023 ARM64 (Graviton)
 
   depends_on = [
     aws_iam_role_policy_attachment.eks_worker_node_policy,
