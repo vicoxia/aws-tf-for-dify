@@ -287,10 +287,10 @@ resource "helm_release" "dify" {
     value = "disable"
   }
 
-  # Enterprise database
+  # Enterprise database (matching values.yaml naming)
   set {
     name  = "externalPostgres.credentials.enterprise.database"
-    value = "dify_enterprise"
+    value = "enterprise"
   }
 
   set {
@@ -308,10 +308,10 @@ resource "helm_release" "dify" {
     value = "disable"
   }
 
-  # Audit database
+  # Audit database (matching values.yaml naming)
   set {
     name  = "externalPostgres.credentials.audit.database"
-    value = "dify_audit"
+    value = "audit"
   }
 
   set {

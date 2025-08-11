@@ -94,53 +94,19 @@ resource "aws_rds_cluster_instance" "main" {
   }
 }
 
-# ──────────────── Create Additional Databases ────────────────
-# Create additional databases for Dify EE components
-resource "null_resource" "create_additional_databases" {
-  depends_on = [
-    aws_rds_cluster.main,
-    aws_rds_cluster_instance.main
-  ]
-  
-  provisioner "local-exec" {
-    command = <<-EOT
-      # Wait for Aurora cluster to be ready
-      echo "Waiting for Aurora cluster to be ready..."
-      sleep 120
-      
-      # Install postgresql-client if not available
-      if ! command -v psql &> /dev/null; then
-        echo "Installing postgresql-client..."
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-          brew install postgresql
-        elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-          sudo apt-get update && sudo apt-get install -y postgresql-client || sudo yum install -y postgresql
-        fi
-      fi
-      
-      # Create the plugin daemon database
-      echo "Creating dify_plugin_daemon database..."
-      PGPASSWORD="${var.rds_password}" psql -h ${aws_rds_cluster.main.endpoint} -U ${var.rds_username} -d dify -c "CREATE DATABASE dify_plugin_daemon;" || echo "Database may already exist"
-      
-      # Create the enterprise database
-      echo "Creating dify_enterprise database..."
-      PGPASSWORD="${var.rds_password}" psql -h ${aws_rds_cluster.main.endpoint} -U ${var.rds_username} -d dify -c "CREATE DATABASE dify_enterprise;" || echo "Database may already exist"
-      
-      # Create the audit database
-      echo "Creating dify_audit database..."
-      PGPASSWORD="${var.rds_password}" psql -h ${aws_rds_cluster.main.endpoint} -U ${var.rds_username} -d dify -c "CREATE DATABASE dify_audit;" || echo "Database may already exist"
-      
-      # Verify database creation
-      echo "Verifying database creation..."
-      PGPASSWORD="${var.rds_password}" psql -h ${aws_rds_cluster.main.endpoint} -U ${var.rds_username} -d dify -c "SELECT datname FROM pg_database WHERE datname IN ('dify_plugin_daemon', 'dify_enterprise', 'dify_audit');"
-    EOT
-  }
-  
-  triggers = {
-    cluster_endpoint = aws_rds_cluster.main.endpoint
-    cluster_id       = aws_rds_cluster.main.id
-  }
-}
+# ──────────────── Database Initialization ────────────────
+# Note: Database creation is now handled by the Dify Helm Chart
+# The chart includes initdb scripts that create the required databases:
+# - enterprise (for enterprise features)
+# - audit (for audit logging)
+# - dify_plugin_daemon (for plugin system)
+#
+# This is configured in the values.yaml file under:
+# - postgresql.primary.initdb.scripts (for internal PostgreSQL)
+# - Database migration jobs (for external PostgreSQL like Aurora)
+#
+# No additional null_resource is needed as the Helm chart handles
+# database initialization automatically during deployment.
 
 # 输出Aurora集群端点
 output "aurora_cluster_endpoint" {
