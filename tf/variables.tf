@@ -187,17 +187,23 @@ variable "public_subnet_ids" {
   default     = []
 }
 
-# Database Configuration
-variable "db_instance_class" {
-  description = "RDS instance class"
+# Database Configuration (Aurora Serverless v2)
+variable "db_engine_version" {
+  description = "Aurora PostgreSQL engine version"
   type        = string
-  default     = "db.r6g.large"
+  default     = "17.5"
 }
 
-variable "db_allocated_storage" {
-  description = "RDS allocated storage in GB"
+variable "db_min_capacity" {
+  description = "Aurora Serverless v2 minimum capacity (ACU)"
   type        = number
-  default     = 100
+  default     = 0.5
+}
+
+variable "db_max_capacity" {
+  description = "Aurora Serverless v2 maximum capacity (ACU)"
+  type        = number
+  default     = 4
 }
 
 variable "db_backup_retention_period" {
@@ -212,23 +218,26 @@ variable "db_backup_window" {
   default     = "03:00-04:00"
 }
 
-# Redis Configuration
+# Redis Configuration (Cluster Mode Disabled)
+# 节点数量和高可用性配置根据环境自动设置：
+# - test环境：单节点模式 (cache.t4g.micro)
+# - prod环境：主从复制模式 (用户配置的实例类型)
 variable "redis_node_type" {
-  description = "ElastiCache Redis node type"
+  description = "ElastiCache Redis node type (仅用于生产环境，测试环境固定使用cache.t4g.micro)"
   type        = string
   default     = "cache.r6g.large"
-}
-
-variable "redis_num_cache_nodes" {
-  description = "Number of cache nodes"
-  type        = number
-  default     = 1
 }
 
 variable "redis_parameter_group_name" {
   description = "Redis parameter group name"
   type        = string
   default     = "default.redis7"
+}
+
+variable "redis_engine_version" {
+  description = "ElastiCache Redis engine version"
+  type        = string
+  default     = "7.1"
 }
 
 # OpenSearch Configuration
@@ -248,6 +257,12 @@ variable "opensearch_ebs_volume_size" {
   description = "OpenSearch EBS volume size in GB"
   type        = number
   default     = 20
+}
+
+variable "opensearch_engine_version" {
+  description = "OpenSearch engine version"
+  type        = string
+  default     = "OpenSearch_2.19"
 }
 
 # Storage Configuration

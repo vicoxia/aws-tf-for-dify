@@ -48,7 +48,7 @@ resource "aws_security_group" "opensearch" {
 # OpenSearch Domain
 resource "aws_opensearch_domain" "main" {
   domain_name    = "${var.cluster_name}-opensearch"
-  engine_version = "OpenSearch_2.19"
+  engine_version = var.opensearch_engine_version
 
   cluster_config {
     instance_type  = var.opensearch_instance_type

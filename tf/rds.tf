@@ -1,14 +1,5 @@
 locals {
   rds_subnets = length(var.rds_subnets) > 0 ? var.rds_subnets : (local.create_vpc ? aws_subnet.private[*].id : [])
-  
-  # Environment-specific Aurora Serverless configurations
-  aurora_config = var.environment == "test" ? {
-    min_capacity = 0.5  # 最小容量（ACU）
-    max_capacity = 4    # 最大容量（ACU）
-  } : {
-    min_capacity = 1    # 最小容量（ACU）
-    max_capacity = 8    # 最大容量（ACU）
-  }
 }
 
 # RDS Subnet Group (可以用于Aurora)
@@ -52,7 +43,7 @@ resource "aws_rds_cluster" "main" {
   cluster_identifier      = "${var.cluster_name}-aurora-postgres"
   engine                  = "aurora-postgresql"
   engine_mode             = "provisioned"  # 对于Serverless v2，使用provisioned模式
-  engine_version          = "17.5"         # 使用最新的Aurora PostgreSQL 17.5版本
+  engine_version          = var.db_engine_version
   database_name           = "dify"
   master_username         = "postgres"
   master_password         = "DifyRdsPassword123!"  # 请修改为您的密码
@@ -69,8 +60,8 @@ resource "aws_rds_cluster" "main" {
   
   # 启用Serverless v2
   serverlessv2_scaling_configuration {
-    min_capacity = local.aurora_config.min_capacity
-    max_capacity = local.aurora_config.max_capacity
+    min_capacity = var.db_min_capacity
+    max_capacity = var.db_max_capacity
   }
   
   tags = {
@@ -79,20 +70,8 @@ resource "aws_rds_cluster" "main" {
   }
 }
 
-# Aurora Serverless v2 实例
-resource "aws_rds_cluster_instance" "main" {
-  identifier          = "${var.cluster_name}-aurora-postgres-instance"
-  cluster_identifier  = aws_rds_cluster.main.id
-  instance_class      = var.db_instance_class
-  engine              = aws_rds_cluster.main.engine
-  engine_version      = aws_rds_cluster.main.engine_version
-  publicly_accessible = var.rds_public_accessible
-  
-  tags = {
-    Name        = "${var.cluster_name}-aurora-postgres-instance"
-    Environment = var.environment
-  }
-}
+# Aurora Serverless v2 不需要单独的实例资源
+# 容量由 serverlessv2_scaling_configuration 自动管理
 
 # ──────────────── Database Initialization ────────────────
 # Note: Database creation is now handled by the Dify Helm Chart
@@ -126,19 +105,19 @@ output "additional_databases_info" {
       database_name = "dify_plugin_daemon"
       host         = aws_rds_cluster.main.endpoint
       port         = 5432
-      username     = var.rds_username
+      username     = "postgres"
     }
     enterprise = {
       database_name = "dify_enterprise"
       host         = aws_rds_cluster.main.endpoint
       port         = 5432
-      username     = var.rds_username
+      username     = "postgres"
     }
     audit = {
       database_name = "dify_audit"
       host         = aws_rds_cluster.main.endpoint
       port         = 5432
-      username     = var.rds_username
+      username     = "postgres"
     }
   }
 }
