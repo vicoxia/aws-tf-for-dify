@@ -4,10 +4,10 @@ locals {
 
 # S3 Bucket for Dify storage
 resource "aws_s3_bucket" "dify_storage" {
-  bucket = "dify-${var.environment}-storage-${random_string.bucket_suffix.result}"
+  bucket = "${var.prefix}-${var.environment}-storage-${random_string.bucket_suffix.result}"
 
   tags = {
-    Name        = "dify-${var.environment}-storage"
+    Name        = "${var.prefix}-${var.environment}-storage"
     Environment = var.environment
   }
 }

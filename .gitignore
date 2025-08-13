@@ -7,7 +7,7 @@
 .terraform.lock.hcl
 crash.log
 crash.*.log
-
+.terraform.lock.hcl
 # IDE files
 .vscode/
 .idea/
@@ -21,3 +21,13 @@ Thumbs.db
 # Backup files
 *.bak
 *.backup
+
+
+#output
+secret/*.log
+secret/*.txt
+secret/*.yaml
+secret/*.sh
+
+#values
+values.yaml
