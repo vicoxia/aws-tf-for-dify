@@ -14,7 +14,7 @@ resource "aws_vpc" "main" {
   enable_dns_support   = true
 
   tags = {
-    Name        = "${var.cluster_name}-vpc"
+    Name        = "${var.prefix}-${var.environment}-${var.cluster_name}-vpc"
     Environment = var.environment
     "kubernetes.io/cluster/${var.cluster_name}" = "shared"
   }
@@ -26,7 +26,7 @@ resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main[0].id
 
   tags = {
-    Name        = "${var.cluster_name}-igw"
+    Name        = "${var.prefix}-${var.environment}-${var.cluster_name}-igw"
     Environment = var.environment
   }
 }
@@ -40,7 +40,7 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name                     = "${var.cluster_name}-public-${count.index + 1}"
+    Name                     = "${var.prefix}-${var.environment}-${var.cluster_name}-public-${count.index + 1}"
     Environment              = var.environment
     "kubernetes.io/role/elb" = "1"
     "kubernetes.io/cluster/${var.cluster_name}" = "shared"
@@ -55,7 +55,7 @@ resource "aws_subnet" "private" {
   availability_zone = local.availability_zones[count.index]
 
   tags = {
-    Name                              = "${var.cluster_name}-private-${count.index + 1}"
+    Name                              = "${var.prefix}-${var.environment}-${var.cluster_name}-private-${count.index + 1}"
     Environment                       = var.environment
     "kubernetes.io/role/internal-elb" = "1"
     "kubernetes.io/cluster/${var.cluster_name}" = "shared"
@@ -68,7 +68,7 @@ resource "aws_eip" "nat" {
   domain = "vpc"
 
   tags = {
-    Name        = "${var.cluster_name}-nat-eip"
+    Name        = "${var.prefix}-${var.environment}-${var.cluster_name}-nat-eip"
     Environment = var.environment
   }
 }
@@ -79,7 +79,7 @@ resource "aws_nat_gateway" "main" {
   subnet_id     = aws_subnet.public[0].id  # 使用第一个公有子网
 
   tags = {
-    Name        = "${var.cluster_name}-nat"
+    Name        = "${var.prefix}-${var.environment}-${var.cluster_name}-nat"
     Environment = var.environment
   }
 
@@ -97,7 +97,7 @@ resource "aws_route_table" "public" {
   }
 
   tags = {
-    Name        = "${var.cluster_name}-public-rt"
+    Name        = "${var.prefix}-${var.environment}-${var.cluster_name}-public-rt"
     Environment = var.environment
   }
 }
@@ -112,7 +112,7 @@ resource "aws_route_table" "private" {
   }
 
   tags = {
-    Name        = "${var.cluster_name}-private-rt"
+    Name        = "${var.prefix}-${var.environment}-${var.cluster_name}-private-rt"
     Environment = var.environment
   }
 }

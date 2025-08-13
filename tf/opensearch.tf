@@ -15,7 +15,7 @@ locals {
 
 # OpenSearch Security Group
 resource "aws_security_group" "opensearch" {
-  name_prefix = "${var.cluster_name}-opensearch-"
+  name_prefix = "${var.prefix}-${var.environment}-${var.cluster_name}-opensearch-"
   vpc_id      = local.vpc_id
 
   ingress {
@@ -40,7 +40,7 @@ resource "aws_security_group" "opensearch" {
   }
 
   tags = {
-    Name        = "${var.cluster_name}-opensearch-sg"
+    Name        = "${var.prefix}-${var.environment}-${var.cluster_name}-opensearch-sg"
     Environment = var.environment
   }
 }
@@ -98,13 +98,13 @@ resource "aws_opensearch_domain" "main" {
           AWS = "*"
         }
         Action   = "es:*"
-        Resource = "arn:aws:es:${var.aws_region}:${var.aws_account_id}:domain/dify-${var.environment}-opensearch/*"
+        Resource = "arn:aws:es:${var.aws_region}:${var.aws_account_id}:domain/${var.cluster_name}-opensearch/*"
       }
     ]
   })
 
   tags = {
-    Name        = "${var.cluster_name}-opensearch"
+    Name        = "${var.prefix}-${var.environment}-${var.cluster_name}-opensearch"
     Environment = var.environment
   }
 }

@@ -137,8 +137,12 @@ get_database_passwords() {
 # 生成Dify部署配置文件
 generate_dify_config() {
     local timestamp=$(date +%Y%m%d_%H%M%S)
-    local config_file="dify_deployment_config_${timestamp}.txt"
-    local values_file="dify_values_${timestamp}.yaml"
+    
+    # 创建secret目录（在tf的上级目录）
+    mkdir -p ../secret
+    
+    local config_file="../secret/dify_deployment_config_${timestamp}.txt"
+    local values_file="../secret/dify_values_${timestamp}.yaml"
     
     log_info "生成Dify部署配置文件..."
     
@@ -219,7 +223,7 @@ helm repo add dify https://langgenius.github.io/dify-helm
 helm repo update
 
 ## 4. 使用生成的values.yaml部署
-helm upgrade -i dify -f $values_file dify/dify
+helm upgrade -i dify -f ../secret/$values_file dify/dify
 
 # ========================================
 # 重要提醒
@@ -519,12 +523,12 @@ externalPostgres:
       password: "$RDS_PASSWORD"
       sslmode: "require"
     enterprise:
-      database: "enterprise"
+      database: "dify_enterprise"
       username: "$RDS_USERNAME"
       password: "$RDS_PASSWORD"
       sslmode: "require"
     audit:
-      database: "audit"
+      database: "dify_audit"
       username: "$RDS_USERNAME"
       password: "$RDS_PASSWORD"
       sslmode: "require"
@@ -580,8 +584,8 @@ EOF
 # 生成部署脚本
 generate_deployment_script() {
     local timestamp=$(date +%Y%m%d_%H%M%S)
-    local deploy_script="deploy_dify_${timestamp}.sh"
-    local values_file="dify_values_${timestamp}.yaml"
+    local deploy_script="../secret/deploy_dify_${timestamp}.sh"
+    local values_file="../secret/dify_values_${timestamp}.yaml"
     
     log_info "生成部署脚本..."
     
@@ -648,7 +652,7 @@ EOF
 
 # 生成输出日志
 generate_output_log() {
-    local output_file="out.log"
+    local output_file="../secret/out.log"
     
     log_info "生成Terraform输出日志..."
     
@@ -730,10 +734,10 @@ main() {
     log_success "所有配置文件生成完成！"
     echo
     echo "生成的文件:"
-    echo "  - dify_deployment_config_*.txt  (详细配置信息)"
-    echo "  - dify_values_*.yaml           (Helm Values配置)"
-    echo "  - deploy_dify_*.sh             (自动部署脚本)"
-    echo "  - out.log                      (Terraform输出日志)"
+    echo "  - ../secret/dify_deployment_config_*.txt  (详细配置信息)"
+    echo "  - ../secret/dify_values_*.yaml           (Helm Values配置)"
+    echo "  - ../secret/deploy_dify_*.sh             (自动部署脚本)"
+    echo "  - ../secret/out.log                      (Terraform输出日志)"
     echo
     log_warning "重要提醒:"
     echo "  1. 这些文件包含敏感信息，请妥善保管"
@@ -743,8 +747,8 @@ main() {
     echo
     echo "下一步操作:"
     echo "  1. 检查并修改生成的values.yaml文件"
-    echo "  2. 运行部署脚本: ./deploy_dify_*.sh"
-    echo "  3. 或手动部署: helm upgrade -i dify -f dify_values_*.yaml dify/dify"
+    echo "  2. 运行部署脚本: ../secret/deploy_dify_*.sh"
+    echo "  3. 或手动部署: helm upgrade -i dify -f ../secret/dify_values_*.yaml dify/dify"
     echo
 }
 

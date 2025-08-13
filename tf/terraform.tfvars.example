@@ -9,10 +9,11 @@ aws_account_id = "123456789012"  # 请修改为您的AWS账户ID
 # ──────────────── 集群配置 ────────────────
 cluster_name = "dify-eks-cluster"
 cluster_version = "1.33"
+eks_arch       = "amd64"  # 可选: amd64 或 arm64
 
 # 节点组配置（根据环境自动设置）
-# test环境：1个节点，m7g.xlarge (4 vCPU, 16 GB RAM, Graviton3)
-# prod环境：6个节点，m7g.2xlarge (8 vCPU, 32 GB RAM, Graviton3)
+# test环境：1个节点，m7g.xlarge (4 vCPU, 16 GB RAM)
+# prod环境：6个节点，m7g.2xlarge (8 vCPU, 32 GB RAM)
 
 # ──────────────── 网络配置 ────────────────
 # 如果使用现有VPC，请取消注释并填写实际值
