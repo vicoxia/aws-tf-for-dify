@@ -1,18 +1,19 @@
 #!/bin/bash
 
 # Dify Enterprise Database Creation Script (Using RDS Data API)
-# 这个脚本使用RDS Data API创建Dify企业版所需的额外数据库
-# 无需网络连接到数据库，通过AWS API调用执行
+# This script uses the RDS Data API to create additional databases required for Dify Enterprise Edition.
+# No direct network connection to the database is needed; operations are performed via AWS API calls.
+# This script will be automatically executed during the terraform build process, no manual execution is required, but you can run it manually if needed.
 
 set -e  # 遇到错误立即退出
 
-# 颜色定义
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# 函数：打印带颜色的信息
+
 print_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
 }
@@ -25,7 +26,7 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# 检查环境变量
+
 check_env_vars() {
     print_info "检查环境变量..."
     

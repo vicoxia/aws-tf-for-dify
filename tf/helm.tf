@@ -15,8 +15,8 @@ resource "helm_release" "aws_load_balancer_controller" {
   chart      = "aws-load-balancer-controller"
   version    = var.aws_load_balancer_controller_version
   namespace  = "kube-system"
-  
-  timeout = 600  # 10分钟超时
+
+  timeout = 600 # 10分钟超时
   wait    = true
 
   set {
@@ -94,7 +94,7 @@ resource "aws_iam_policy" "aws_load_balancer_controller" {
 
   name        = "AWSLoadBalancerControllerIAMPolicy-${var.environment}"
   description = "IAM policy for AWS Load Balancer Controller"
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -201,7 +201,7 @@ resource "aws_iam_policy" "aws_load_balancer_controller" {
         Resource = "arn:aws:ec2:*:*:security-group/*"
         Condition = {
           Null = {
-            "aws:RequestTag/elbv2.k8s.aws/cluster" = "true"
+            "aws:RequestTag/elbv2.k8s.aws/cluster"  = "true"
             "aws:ResourceTag/elbv2.k8s.aws/cluster" = "false"
           }
         }
@@ -256,7 +256,7 @@ resource "aws_iam_policy" "aws_load_balancer_controller" {
         ]
         Condition = {
           Null = {
-            "aws:RequestTag/elbv2.k8s.aws/cluster" = "true"
+            "aws:RequestTag/elbv2.k8s.aws/cluster"  = "true"
             "aws:ResourceTag/elbv2.k8s.aws/cluster" = "false"
           }
         }
@@ -397,8 +397,8 @@ resource "helm_release" "cert_manager" {
   namespace  = "cert-manager"
 
   create_namespace = true
-  timeout = 600  # 10分钟超时
-  wait    = true
+  timeout          = 600 # 10分钟超时
+  wait             = true
 
   set {
     name  = "installCRDs"

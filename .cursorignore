@@ -1,0 +1,21 @@
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*lock.info
+*lock.hcl
+# OS files
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+
+
+#output
+secret/*.log
+secret/*.txt
+secret/*.yaml
+secret/*.sh

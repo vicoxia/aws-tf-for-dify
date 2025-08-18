@@ -5,9 +5,9 @@ locals {
 # RDS Subnet Group (可以用于Aurora)
 # RDS凭证存储（Secrets Manager）
 resource "aws_secretsmanager_secret" "rds_credentials" {
-  name = "${var.prefix}-${var.environment}-${var.cluster_name}-rds-credentials"
+  name        = "${var.prefix}-${var.environment}-${var.cluster_name}-rds-credentials"
   description = "RDS Aurora cluster credentials for Dify"
-  
+
   tags = {
     Name        = "${var.prefix}-${var.environment}-${var.cluster_name}-rds-credentials"
     Environment = var.environment
@@ -59,33 +59,33 @@ resource "aws_security_group" "rds" {
 
 # Aurora Serverless v2 Cluster
 resource "aws_rds_cluster" "main" {
-  cluster_identifier      = "${var.cluster_name}-aurora-postgres"
-  engine                  = "aurora-postgresql"
-  engine_mode             = "provisioned"  # 对于Serverless v2，使用provisioned模式
-  engine_version          = var.db_engine_version
-  database_name           = "dify"
-  master_username         = "postgres"
-  master_password         = "DifyRdsPassword123!"  # 请修改为您的密码
-  db_subnet_group_name    = aws_db_subnet_group.main.name
-  vpc_security_group_ids  = [aws_security_group.rds.id]
-  
-  skip_final_snapshot     = true
-  backup_retention_period = var.db_backup_retention_period
-  preferred_backup_window = var.db_backup_window
+  cluster_identifier     = "${var.cluster_name}-aurora-postgres"
+  engine                 = "aurora-postgresql"
+  engine_mode            = "provisioned" # 对于Serverless v2，使用provisioned模式
+  engine_version         = var.db_engine_version
+  database_name          = "dify"
+  master_username        = "postgres"
+  master_password        = "DifyRdsPassword123!" # 请修改为您的密码
+  db_subnet_group_name   = aws_db_subnet_group.main.name
+  vpc_security_group_ids = [aws_security_group.rds.id]
+
+  skip_final_snapshot          = true
+  backup_retention_period      = var.db_backup_retention_period
+  preferred_backup_window      = var.db_backup_window
   preferred_maintenance_window = "sun:04:00-sun:05:00"
-  
+
   # 启用存储加密
-  storage_encrypted       = true
-  
+  storage_encrypted = true
+
   # 启用Data API以支持无网络连接的数据库操作
-  enable_http_endpoint    = true
-  
+  enable_http_endpoint = true
+
   # 启用Serverless v2
   serverlessv2_scaling_configuration {
     min_capacity = var.db_min_capacity
     max_capacity = var.db_max_capacity
   }
-  
+
   tags = {
     Name        = "${var.prefix}-${var.environment}-${var.cluster_name}-aurora-postgres"
     Environment = var.environment
@@ -95,15 +95,15 @@ resource "aws_rds_cluster" "main" {
 # Aurora Serverless v2 实例
 # 注意：Serverless v2 仍需要创建实例，但实例类型必须是 "db.serverless"
 resource "aws_rds_cluster_instance" "main" {
-  count              = var.environment == "test" ? 1 : 2  # 测试环境1个，生产环境2个
+  count              = var.environment == "test" ? 1 : 2 # 测试环境1个，生产环境2个
   identifier         = "${var.cluster_name}-aurora-instance-${count.index + 1}"
   cluster_identifier = aws_rds_cluster.main.id
-  instance_class     = "db.serverless"  # Serverless v2 必须使用此实例类型
+  instance_class     = "db.serverless" # Serverless v2 必须使用此实例类型
   engine             = aws_rds_cluster.main.engine
   engine_version     = aws_rds_cluster.main.engine_version
-  
+
   performance_insights_enabled = var.environment == "prod" ? true : false
-  
+
   tags = {
     Name        = "${var.prefix}-${var.environment}-${var.cluster_name}-aurora-instance-${count.index + 1}"
     Environment = var.environment
@@ -120,17 +120,17 @@ resource "aws_rds_cluster_instance" "main" {
 # Use local-exec to create the additional databases via RDS Data API
 resource "null_resource" "create_additional_databases" {
   depends_on = [aws_rds_cluster_instance.main, aws_secretsmanager_secret_version.rds_credentials]
-  
+
   provisioner "local-exec" {
     command = "bash ${path.module}/create_dify_databases_dataapi.sh"
-    
+
     environment = {
       CLUSTER_ARN = aws_rds_cluster.main.arn
       SECRET_ARN  = aws_secretsmanager_secret.rds_credentials.arn
-      AWS_REGION  = data.aws_region.current.name
+      AWS_REGION  = var.aws_region
     }
   }
-  
+
   # Trigger recreation if cluster or secret changes
   triggers = {
     cluster_arn = aws_rds_cluster.main.arn
@@ -139,8 +139,7 @@ resource "null_resource" "create_additional_databases" {
   }
 }
 
-# Get current AWS region
-data "aws_region" "current" {}
+
 
 # 输出Aurora集群端点
 output "aurora_cluster_endpoint" {
@@ -178,21 +177,21 @@ output "additional_databases_info" {
   value = {
     plugin_daemon = {
       database_name = "dify_plugin_daemon"
-      host         = aws_rds_cluster.main.endpoint
-      port         = 5432
-      username     = "postgres"
+      host          = aws_rds_cluster.main.endpoint
+      port          = 5432
+      username      = "postgres"
     }
     enterprise = {
       database_name = "dify_enterprise"
-      host         = aws_rds_cluster.main.endpoint
-      port         = 5432
-      username     = "postgres"
+      host          = aws_rds_cluster.main.endpoint
+      port          = 5432
+      username      = "postgres"
     }
     audit = {
       database_name = "dify_audit"
-      host         = aws_rds_cluster.main.endpoint
-      port         = 5432
-      username     = "postgres"
+      host          = aws_rds_cluster.main.endpoint
+      port          = 5432
+      username      = "postgres"
     }
   }
 }

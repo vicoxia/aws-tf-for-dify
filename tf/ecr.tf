@@ -60,9 +60,9 @@ resource "aws_ecr_lifecycle_policy" "dify_ee_plugin" {
         rulePriority = 1
         description  = "Keep last 20 plugin images"
         selection = {
-          tagStatus     = "any"
-          countType     = "imageCountMoreThan"
-          countNumber   = 20
+          tagStatus   = "any"
+          countType   = "imageCountMoreThan"
+          countNumber = 20
         }
         action = {
           type = "expire"

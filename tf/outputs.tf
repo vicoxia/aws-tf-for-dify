@@ -107,21 +107,21 @@ output "helm_releases_status" {
       namespace = "kube-system"
       status    = var.install_aws_load_balancer_controller ? "deployed" : "not_installed"
     } : null
-    
+
     nginx_ingress = var.install_nginx_ingress ? {
       name      = "nginx-ingress"
       namespace = "ingress-nginx"
       status    = var.install_nginx_ingress ? "deployed" : "not_installed"
     } : null
-    
+
     cert_manager = var.install_cert_manager ? {
       name      = "cert-manager"
       namespace = "cert-manager"
       status    = var.install_cert_manager ? "deployed" : "not_installed"
     } : null
-    
 
-    
+
+
 
 
   }

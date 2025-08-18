@@ -1,55 +1,6 @@
 # Dify 企业版 AWS 基础设施部署
 
-本仓库包含在AWS上部署Dify企业版所需基础设施的Terraform配置。
 
-## 🚀 重要说明
-
-**此Terraform方案专门用于部署AWS基础设施，不包括Dify应用的部署。**
-
-部署流程分为三个阶段：
-1. **阶段一**：使用此Terraform方案部署AWS基础设施
-2. **阶段二**：验证基础设施部署并生成Dify部署配置
-3. **阶段三**：使用生成的配置部署Dify应用
-
-## 🏗️ 部署的AWS基础设施
-
-### 核心服务
-- **EKS集群**: Kubernetes 1.33，使用Graviton3处理器（ARM64）
-- **Aurora PostgreSQL Serverless v2**: 主数据库服务，自动扩缩容
-- **ElastiCache Redis**: 缓存和会话存储（Cluster Mode Disabled）
-- **OpenSearch**: 向量数据库服务
-- **S3存储桶**: 文件存储，支持版本控制
-- **ECR仓库**: 容器镜像存储
-
-### 网络和安全
-- **VPC**: 网络隔离和安全，自动获取可用区
-- **子网**: 公有和私有子网，多可用区部署
-- **NAT Gateway**: 单个NAT Gateway（成本优化）
-- **安全组**: 网络访问控制
-- **IAM角色**: 为IRSA提供权限策略
-
-### Kubernetes基础组件
-- **Dify命名空间**: 应用部署的专用命名空间
-- **IRSA ServiceAccounts**: 为Dify应用提供AWS权限的服务账户
-
-### 可选组件（通过变量控制）
-- **AWS Load Balancer Controller**: ALB/NLB支持
-- **NGINX Ingress Controller**: 流量路由
-- **Cert-Manager**: SSL证书管理
-
-## 📊 环境特定配置
-
-### 测试环境 (`environment = "test"`)
-- **EKS节点**: 1个节点，m7g.xlarge (4 vCPU, 16 GB RAM, Graviton3)
-- **Aurora**: 0.5-4 ACU，成本优化
-- **Redis**: 单节点模式，cache.t4g.micro
-- **OpenSearch**: t3.small.search，单实例
-
-### 生产环境 (`environment = "prod"`)  
-- **EKS节点**: 6个节点，m7g.2xlarge (8 vCPU, 32 GB RAM, Graviton3)
-- **Aurora**: 1-8 ACU，高可用配置
-- **Redis**: 主从复制模式，自动故障转移
-- **OpenSearch**: 多实例，高可用部署
 
 ## 🔧 完整部署流程
 
@@ -60,14 +11,19 @@
 git clone <repository-url>
 cd dify-aws-terraform
 
-# 2. 配置变量
+# 2. 确认权限
+
+bash tf/check_aws_permissions.sh
+
+# 3. 配置变量
 cp tf/terraform.tfvars.example tf/terraform.tfvars
+
 # 编辑 terraform.tfvars 文件，设置：
 # - environment = "test" 或 "prod"
 # - aws_region = "your-region"
 # - aws_account_id = "your-account-id"
 
-# 3. 部署基础设施
+# 4. 部署基础设施
 cd tf
 terraform init
 terraform plan
@@ -87,54 +43,8 @@ terraform apply -auto-approve
 ./post_apply.sh
 ```
 
-**验证脚本功能:**
-- ✅ **快速验证**: 检查7个核心资源状态（30秒内完成）
-- ✅ **完整验证**: 全面检查所有AWS资源、Kubernetes集群、Helm部署
-- ✅ **自动报告**: 生成详细验证报告和故障排除建议
 
-**配置生成功能:**
-- 📋 **out.log**: 包含所有Terraform输出和敏感信息
-- ⚙️ **dify_values_*.yaml**: 可直接使用的Helm Values配置
-- 🚀 **deploy_dify_*.sh**: 一键部署脚本
-- 📝 **dify_deployment_config_*.txt**: 详细环境变量配置
 
-### 阶段三：部署Dify应用
-
-基础设施验证通过并生成配置文件后，请参考以下文档部署Dify应用：
-
-- **测试环境部署**: [additional_docs/测试环境部署.md](additional_docs/测试环境部署.md)
-- **生产环境部署**: [additional_docs/生产环境部署.md](additional_docs/生产环境部署.md)
-
-这些文档包含详细的Helm部署步骤、配置说明和验证方法。
-
-## 🔍 验证和故障排除
-
-### 基础设施验证
-
-#### 快速验证输出示例
-```
-==========================================
-  Dify基础设施快速验证
-  集群: dify-eks-cluster
-  区域: us-east-1
-==========================================
-EKS集群状态: ACTIVE
-节点组状态: ACTIVE
-Aurora数据库: AVAILABLE
-Redis缓存: AVAILABLE
-OpenSearch: AVAILABLE
-S3存储桶: ACCESSIBLE
-ECR仓库: ACCESSIBLE
-==========================================
-```
-
-#### 完整验证功能
-- 🔍 **VPC和网络**: 子网、NAT Gateway、路由表
-- 🔍 **EKS集群**: 集群状态、节点健康、系统Pod
-- 🔍 **数据库服务**: Aurora、Redis、OpenSearch连接性
-- 🔍 **存储服务**: S3权限、ECR访问
-- 🔍 **Kubernetes**: 命名空间、ServiceAccount、IRSA配置
-- 🔍 **Helm部署**: AWS Load Balancer Controller、Cert-Manager状态
 
 ### 常见问题解决
 
@@ -165,81 +75,7 @@ terraform show
 terraform refresh
 ```
 
-## 📝 生成的配置文件
 
-### Helm Values配置示例
-```yaml
-global:
-  appSecretKey: 'your-secure-key'
-  consoleApiDomain: "console.your-domain.com"
-  serviceApiDomain: "api.your-domain.com"
-
-persistence:
-  type: "s3"
-  s3:
-    endpoint: "https://s3.us-east-1.amazonaws.com"
-    region: "us-east-1"
-    bucketName: "your-s3-bucket"
-    useAwsManagedIam: true  # 使用IRSA
-
-externalPostgres:
-  enabled: true
-  address: "your-aurora-endpoint"
-  credentials:
-    dify:
-      database: "dify"
-      username: "postgres"
-      password: "your-secure-password"
-
-externalRedis:
-  enabled: true
-  host: "your-redis-endpoint"
-  port: 6379
-```
-
-### 环境变量配置示例
-```bash
-# 基础信息
-ENVIRONMENT=test
-AWS_REGION=us-east-1
-CLUSTER_NAME=dify-eks-cluster
-
-# 数据库信息（包含敏感信息）
-RDS_ENDPOINT=your-aurora-endpoint
-RDS_PASSWORD=your-secure-password
-REDIS_ENDPOINT=your-redis-endpoint
-OPENSEARCH_ENDPOINT=your-opensearch-endpoint
-```
-
-## 🔐 安全特性
-
-### IRSA集成
-- 无需在Pod中存储AWS凭证
-- 细粒度权限控制
-- 自动ServiceAccount配置
-
-### 网络安全
-- 私有子网部署
-- 安全组控制
-- VPC网络隔离
-
-### 数据加密
-- S3存储加密
-- RDS数据加密
-- 传输中加密
-
-## 💰 成本优化
-
-### 测试环境优化
-- 单个NAT Gateway（节省67%成本）
-- Graviton3处理器（节省20%成本）
-- Aurora Serverless v2（按需付费）
-- 单节点Redis（最小配置）
-
-### 生产环境配置
-- 高可用多节点部署
-- 自动扩缩容
-- 预留实例优化
 
 ## 🔄 维护和更新
 

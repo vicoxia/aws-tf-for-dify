@@ -4,10 +4,12 @@
 *.tfvars
 !*.tfvars.example
 .terraform/
+.terraform/** 
 .terraform.lock.hcl
 crash.log
 crash.*.log
-.terraform.lock.hcl
+terraform.tfvars
+tf/out.log
 # IDE files
 .vscode/
 .idea/
@@ -31,3 +33,4 @@ secret/*.sh
 
 #values
 values.yaml
+temp.yaml

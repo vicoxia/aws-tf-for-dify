@@ -1,7 +1,7 @@
 locals {
   cluster_subnets = length(var.eks_cluster_subnets) > 0 ? var.eks_cluster_subnets : (local.create_vpc ? aws_subnet.private[*].id : [])
   node_subnets    = length(var.eks_nodes_subnets) > 0 ? var.eks_nodes_subnets : (local.create_vpc ? aws_subnet.private[*].id : [])
-  
+
   # 环境特定的节点配置，随架构切换
   node_config = var.environment == "test" ? (
     var.eks_arch == "amd64" ? {
@@ -9,19 +9,19 @@ locals {
       desired_size   = 1
       max_size       = 2
       min_size       = 1
-    } : {
+      } : {
       instance_types = ["m7g.xlarge"]
       desired_size   = 1
       max_size       = 2
       min_size       = 1
     }
-  ) : (
+    ) : (
     var.eks_arch == "amd64" ? {
       instance_types = ["m7a.2xlarge"]
       desired_size   = 6
       max_size       = 10
       min_size       = 6
-    } : {
+      } : {
       instance_types = ["m7g.2xlarge"]
       desired_size   = 6
       max_size       = 10
@@ -149,12 +149,12 @@ resource "aws_security_group" "eks_nodes" {
 # Used to explicitly specify the node security group, ensuring that our custom security group is used instead of the cluster's default security group
 resource "aws_launch_template" "eks_nodes" {
   name_prefix = "${var.cluster_name}-nodes-"
-  
+
   vpc_security_group_ids = [
     aws_security_group.eks_nodes.id,
     aws_eks_cluster.main.vpc_config[0].cluster_security_group_id
   ]
-  
+
   tag_specifications {
     resource_type = "instance"
     tags = {
@@ -162,7 +162,7 @@ resource "aws_launch_template" "eks_nodes" {
       Environment = var.environment
     }
   }
-  
+
   tags = {
     Name        = "${var.cluster_name}-nodes-launch-template"
     Environment = var.environment

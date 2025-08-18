@@ -1,14 +1,14 @@
 locals {
   opensearch_subnets = length(var.opensearch_subnets) > 0 ? var.opensearch_subnets : (local.create_vpc ? aws_subnet.private[*].id : [])
-  
+
   # Environment-specific OpenSearch configurations
   opensearch_config = var.environment == "test" ? {
-    instance_type  = "m6g.large.search"  # 4 vCPU, 8 GB RAM (Graviton)
-    instance_count = 1
+    instance_type   = "m6g.large.search" # 4 vCPU, 8 GB RAM (Graviton)
+    instance_count  = 1
     ebs_volume_size = 100
-  } : {
-    instance_type  = "m6g.4xlarge.search"  # 16 vCPU, 64 GB RAM (Graviton)
-    instance_count = 3
+    } : {
+    instance_type   = "m6g.4xlarge.search" # 16 vCPU, 64 GB RAM (Graviton)
+    instance_count  = 3
     ebs_volume_size = 100
   }
 }
@@ -85,7 +85,7 @@ resource "aws_opensearch_domain" "main" {
     internal_user_database_enabled = true
     master_user_options {
       master_user_name     = "admin"
-      master_user_password = "DifyOpenSearchPass123!"  # 请修改为您的密码
+      master_user_password = "DifyOpenSearchPass123!" # 请修改为您的密码
     }
   }
 
