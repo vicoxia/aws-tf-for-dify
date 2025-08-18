@@ -1,0 +1,156 @@
+#Please replace the {{value}} with yours
+global:
+  appSecretKey: 'd5098406f3279deb4a7cb4da3b63eef4fa8562b08d7f24336f42851f008e4823'
+  consoleApiDomain: "console.dify.{{yourdomain.com}}"
+  consoleWebDomain: "console.dify.{{yourdomain.com}}"
+  serviceApiDomain: "api.dify.{{yourdomain.com}}"
+  appApiDomain: "app.dify.{{yourdomain.com}}"
+  appWebDomain: "app.dify.{{yourdomain.com}}"
+  filesDomain: "upload.dify.{{yourdomain.com}}"
+  enterpriseDomain: "enterprise.dify.{{yourdomain.com}}"
+  # 是否使用TLS
+  useTLS: true
+
+ingress:
+  enabled: true
+  className: "alb"  # 使用AWS ALB Ingress Controller
+  annotations: {
+    kubernetes.io/ingress.class: alb,
+    alb.ingress.kubernetes.io/scheme: internet-facing,
+    alb.ingress.kubernetes.io/target-type: ip,
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]',
+    alb.ingress.kubernetes.io/ssl-redirect: '443',
+    alb.ingress.kubernetes.io/certificate-arn: 'arn:aws:acm:{{region}}:{{account_id}}:certificate/{{uuid}}', #using AWS ACM certificate
+  }
+
+api:
+  replicas: 1
+  serverWorkerAmount: 1
+  serviceAccountName: "dify-api-sa"
+  innerApi:
+    apiKey: "d5098406f3279deb4a7cb4da3b63eef4fa8562b08d7f24336f42851f008e4823"
+
+
+worker:
+  replicas: 1
+  celeryWorkerAmount: 1
+  serviceAccountName: "dify-api-sa"
+
+web:
+  replicas: 1
+
+sandbox:
+  replicas: 1
+  apiKey: "d5098406f3279deb4a7cb4da3b63eef4fa8562b08d7f24336f42851f008e4823"
+
+enterpriseAudit:
+  replicas: 1
+
+enterprise:
+  replicas: 1
+  appSecretKey: "d5098406f3279deb4a7cb4da3b63eef4fa8562b08d7f24336f42851f008e4823"
+  adminAPIsSecretKeySalt: "e503a6f91b6fd8446efd42f0950c6289b1cbd52a58f414632b5bc7ff0d4fc5bd"
+  innerApi:
+    apiKey: "d5098406f3279deb4a7cb4da3b63eef4fa8562b08d7f24336f42851f008e4823"
+
+
+enterpriseFrontend:
+  replicas: 1
+ssrfProxy:
+  enabled: true
+  replicas: 1
+unstructured:
+  enabled: false
+  replicas: 1
+
+  
+plugin_daemon:
+  replicas: 1
+  apiKey: "d5098406f3279deb4a7cb4da3b63eef4fa8562b08d7f24336f42851f008e4823"
+
+plugin_controller:
+  replicas: 1
+
+plugin_connector:
+  replicas: 1
+  apiKey: "d5098406f3279deb4a7cb4da3b63eef4fa8562b08d7f24336f42851f008e4823"
+  customServiceAccount: "dify-plugin-crd-sa"
+  runnerServiceAccount: "dify-plugin-runner-sa"
+  imageRepoPrefix: "{{account_id}}.dkr.ecr.{{region}}.amazonaws.com/dify-ee-plugin-repo-dify-eks-cluster"
+  imageRepoType: ecr
+  ecrRegion: "{{region}}"
+gateway:
+  replicas: 1
+
+
+###################################
+# 持久化存储配置
+###################################
+persistence:
+  type: "s3"
+  s3:
+    endpoint: "https://s3.{{region}}.amazonaws.com"  # us-east-2 区域的S3端点
+    accessKey: ""  # 使用IRSA，无需填写
+    secretKey: ""  # 使用IRSA，无需填写
+    region: "{{region}}"
+    bucketName: "{{bucket_name}}"
+    addressType: ""
+    useAwsManagedIam: true 
+    useAwsS3: true
+
+
+
+###################################
+# 外部PostgreSQL配置
+###################################
+externalPostgres:
+  enabled: true
+  address: "{{rds_address}}"
+  port: 5432
+  credentials:
+    dify:
+      database: "dify"
+      username: "postgres"
+      password: "DifyRdsPassword123!"
+      sslmode: "require"
+    plugin_daemon:
+      database: "dify_plugin_daemon"
+      username: "postgres"
+      password: "DifyRdsPassword123!"
+      sslmode: "require"
+    enterprise:
+      database: "dify_enterprise"
+      username: "postgres"
+      password: "DifyRdsPassword123!"
+      sslmode: "require"
+    audit:
+      database: "dify_audit"
+      username: "postgres"
+      password: "DifyRdsPassword123!"
+      sslmode: "require"
+
+###################################
+# 外部Redis配置
+###################################
+externalRedis:
+  enabled: true
+  host: "{{redis_address}}"
+  port: 6379
+  username: ""
+  password: ""  # ElastiCache Redis 默认不需要密码
+  useSSL: false
+
+###################################
+# 外部向量数据库配置
+###################################
+vectorDB:
+  useExternal: true
+  externalType: "opensearch"
+  externalOpenSearch:
+    host: "{{opensearch_address}}"
+    port: 443
+    user: "admin"
+    password: "DifyOpenSearchPass123!"
+    useTLS: true
+
+imagePullSecrets: []
