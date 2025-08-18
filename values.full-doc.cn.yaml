@@ -1,0 +1,1040 @@
+# Default values for dify.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+global:
+  # 用于安全签名会话 cookie 和加密数据库中敏感信息的密钥。可以使用 `openssl rand -base64 42` 生成强密钥
+  appSecretKey: "#REPLACE_ME#"
+  # 是否启用 TLS/HTTPS 加密传输，用于集群内部 URL 协议，true=启用HTTPS，false=使用HTTP
+  useTLS: false
+  # 控制台 API 的后端域名，用于拼接授权回调地址
+  # 如果为空，则使用相同域名。示例：console.dify.ai
+  consoleApiDomain: ""
+  # 控制台 Web 前端域名，用于拼接前端地址和 CORS 配置
+  # 如果为空，则使用相同域名。示例：console.dify.ai
+  consoleWebDomain: ""
+  # 服务 API 域名，用于向前端显示 Service API Base Url
+  # 如果为空，则使用相同域名。示例：api.dify.ai
+  serviceApiDomain: ""
+  # WebApp API 后端域名，用于为前端 API 声明后端 URL
+  # 如果为空，则使用相同域名。示例：app.dify.ai
+  appApiDomain: ""
+  # WebApp 域名，用于向前端显示 WebAPP API Base Url。如果为空，则使用相同域名。示例：app.dify.ai
+  appWebDomain: ""
+  # 文件预览或下载域名，用于向前端显示文件预览
+  # 或下载 URL 或作为多模态模型输入；
+  # 为了防止他人伪造，图片预览 URL 是签名的，有效期为 5 分钟
+  filesDomain: ""
+  # 企业服务域名，用于企业版前端和后端 API 的 URL
+  enterpriseDomain: ""
+  # 启用时，将在应用程序启动前执行迁移，应用程序将在迁移完成后启动
+  dbMigrationEnabled: true
+  rag:
+    # RAG ETL 类型，支持：dify 或 Unstructured
+    etlType: "dify"
+    # 关键词数据源存储类型，支持 "database" 表示存储在数据库中，"object_storage" 表示使用对象存储如 MinIO/S3
+    keywordDataSourceType: "object_storage"
+    # RAG 的最大 top-k 值
+    topKMaxValue: 10
+    # 文档分块长度配置。用于控制处理长文档时文本段的大小
+    indexingMaxSegmentationTokensLength: 4000
+  integrations:
+    notion:
+      # Notion 导入配置，支持 public 和 internal
+      integrationType: "internal"
+      # Notion OAuth 应用的客户端 ID，从 Notion 开发者页面获取
+      clientId: ""
+      # Notion OAuth 应用的客户端密钥
+      clientSecret: ""
+      # Notion 内部集成的密钥 token
+      internalSecret: ""
+  marketplace:
+    # 是否启用应用市场功能，允许安装应用模板
+    enabled: true
+    # 应用市场前端访问地址
+    url: "https://marketplace.dify.ai"
+    # 应用市场 API 接口地址
+    apiUrl: "https://marketplace.dify.ai"
+
+ingress:
+  # 是否启用 Kubernetes Ingress 进行外网访问
+  enabled: false
+  # 使用 IP 地址作为主机名，用于通过 IP 地址访问服务
+  # ! 仅支持非企业版 !
+  useIpAsHost: false
+  # Ingress 控制器类名，如 nginx、traefik、alb 等，取决于集群中安装的控制器类型
+  className: ""
+  annotations:
+    {}
+    # kubernetes.io/tls-acme: "true"
+    # HTTPS 协议配置在此处设置，具体配置根据使用的 Ingress 控制器而定
+  # TLS 证书配置列表，HTTPS 证书配置
+  tls: []
+
+api:
+   # 是否启用 API 服务，这是 Dify 的核心后端服务
+  enabled: true
+  image:
+    # 镜像仓库地址，g-hsod9681 开头为国内加速镜像地址
+    # g-hsod9681-docker.pkg.coding.net/dify-artifact/dify/dify-api
+    repository: langgenius/dify-api
+    # 覆盖 Chart.yaml 中的 appVersion，如果不为空
+    tag: "459f017de586871e9478d6198f323391d4ba378c"
+  # API 服务的副本数量，生产环境建议 2+ 实现高可用
+  replicas: 1
+  # CPU 和内存资源限制配置，根据实际负载调整
+  resources: 
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+  # Kubernetes 服务账户名称，用于 API 服务对外访问时的授权
+  serviceAccountName: ""
+  # 节点选择器，用于将 Pod 调度到特定标签的节点
+  nodeSelector: {}
+  # Pod 亲和性配置，控制 Pod 的调度策略
+  affinity: {}
+  # 污点容忍配置，允许Pod调度到有污点的节点
+  tolerations: []
+  readinessProbe:
+    # 连续失败多少次才认为服务不可用
+    failureThreshold: 3
+    httpGet:
+      # 健康检查的HTTP路径
+      path: /health
+      # 健康检查的端口号
+      port: 5001
+      # 使用的协议HTTP/HTTPS
+      scheme: HTTP
+    # 容器启动后等待多少秒开始健康检查
+    initialDelaySeconds: 30
+    # 每隔多少秒执行一次健康检查
+    periodSeconds: 10
+    # 连续成功多少次才认为服务可用
+    successThreshold: 1
+    # 单次健康检查的超时时间
+    timeoutSeconds: 3
+  livenessProbe:
+    # 连续失败多少次就重启容器
+    failureThreshold: 3
+    httpGet:
+      path: /health
+      port: 5001
+      scheme: HTTP
+    # 容器启动后等待多长时间开始存活检查
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 3
+  extraEnv:
+  # Apply your own Environment Variables if necessary. Below is demo.
+  # extraEnv:
+  #   - name: ENV_FROM_COMMUNITY1
+  #     value: env123
+  #   - name: ENV_FROM_COMMUNITY2
+  #     value: env123
+  # 部署环境标识，PRODUCTION=生产环境，DEVELOPMENT=开发环境
+  deployEnv: "PRODUCTION"
+  # Web API跨域请求允许的来源，*表示允许所有来源
+  webApiCorsAllowOrigins: "*"
+  # 控制台跨域请求允许的来源
+  consoleCorsAllowOrigins: "*"
+  # API服务器的工作进程数量，建议根据CPU核心数调整
+  serverWorkerAmount: 1
+  # 检查Dify新版本更新的URL地址
+  checkUpdateUrl: "https://updates.dify.ai"
+  innerApi:
+    # 是否启用内部API，用于服务间通信
+    enabled: true
+    # 内部API访问密钥，生产环境必须替换
+    apiKey: "#REPLACE_ME#"
+  oauth:
+    # OAuth认证重定向路径
+    redirectPath: "/console/api/oauth/authorize"
+    github:
+      # GitHub OAuth应用的客户端ID
+      clientId: ""
+      # GitHub OAuth应用的客户端密钥
+      clientSecret: ""
+    google:
+      # Google OAuth应用的客户端ID
+      clientId: ""
+      # Google OAuth应用的客户端密钥
+      clientSecret: ""
+  db:
+    # 数据库连接池最大连接数，根据并发量调整
+    poolSize: 250
+    # 连接池中连接的回收时间（秒），防止长时间空闲连接
+    poolRecycle: 3600
+  limits:
+    # upload file size limit in MB
+    uploadFileSize: 15
+    # upload file batch count limit
+    uploadFileBatchCount: 5
+    # upload image file size limit in MB
+    uploadImageFileSize: 5
+  sentry:
+    # 是否启用Sentry错误监控和性能追踪
+    enabled: false
+    # Sentry项目的DSN（数据源名称）
+    dsn: ""
+    # 性能追踪的采样率，0.0-1.0之间
+    tracesSampleRate: 1.0
+    # 性能分析的采样率，0.0-1.0之间
+    profilesSampleRate: 1.0
+  positionTool:
+    # 固定显示的工具位置配置
+    pins: ""
+    # 包含的工具列表
+    includes: ""
+    # 排除的工具列表
+    excludes: ""
+  positionProvider:
+    # 固定显示的模型提供商位置
+    pins: ""
+    # 包含的提供商列表
+    includes: ""
+    # 排除的提供商列表
+    excludes: ""
+
+worker:
+  # 是否启用Worker服务，用于处理异步任务
+  enabled: true
+  image:
+    # 镜像仓库地址，g-hsod9681 开头为国内加速镜像地址
+    # g-hsod9681-docker.pkg.coding.net/dify-artifact/dify/dify-api
+    repository: langgenius/dify-api
+  # Worker服务的副本数量
+  replicas: 1
+  resources: {}
+  serviceAccountName: ""
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  # Worker服务通常不需要HTTP健康检查
+  readinessProbe: {}
+  livenessProbe: {}
+  extraEnv:
+  # Celery worker进程的数量，建议根据CPU核心数调整
+  celeryWorkerAmount: 1
+  db:
+    # Worker的数据库连接池配置
+    poolSize: 250
+    poolRecycle: 3600
+  sentry:
+    # Worker的Sentry监控配置
+    enabled: false
+    dsn: ""
+    tracesSampleRate: 1.0
+    profilesSampleRate: 1.0
+
+web:
+  # 是否启用Web前端服务
+  enabled: true
+  image:
+    # 镜像仓库地址，g-hsod9681 开头为国内加速镜像地址
+    # g-hsod9681-docker.pkg.coding.net/dify-artifact/dify/dify-web
+    repository: langgenius/dify-web
+  replicas: 1
+  resources: {}
+  serviceAccountName: ""
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  readinessProbe:
+    initialDelaySeconds: 3
+    failureThreshold: 3
+    periodSeconds: 10
+    successThreshold: 1
+    tcpSocket:
+      # Next.js前端服务的默认端口
+      port: 3000
+    timeoutSeconds: 1
+  livenessProbe:
+    failureThreshold: 3
+    periodSeconds: 10
+    successThreshold: 1
+    tcpSocket:
+      port: 3000
+    timeoutSeconds: 1
+  extraEnv:
+  sentry:
+    # 前端Sentry监控配置
+    enabled: false
+    dsn: ""
+    tracesSampleRate: 1.0
+    profilesSampleRate: 1.0
+
+sandbox:
+  # 是否启用代码执行沙箱服务，用于安全执行用户代码
+  enabled: true
+  image:
+    # g-hsod9681-docker.pkg.coding.net/dify-artifact/dify/dify-sandbox
+    repository: langgenius/dify-sandbox
+    tag: "0.2.11"
+  replicas: 1
+  resources: {}
+  serviceAccountName: ""
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  readinessProbe:
+    # 沙箱启动较慢，允许更多失败次数
+    failureThreshold: 60
+    initialDelaySeconds: 3
+    # 检查频率更高
+    periodSeconds: 3
+    successThreshold: 1
+    tcpSocket:
+      # 沙箱服务端口
+      port: 8194
+    timeoutSeconds: 3
+  livenessProbe:
+    failureThreshold: 3
+    periodSeconds: 3
+    successThreshold: 1
+    tcpSocket:
+      port: 8194
+    timeoutSeconds: 1
+  extraEnv:
+  # 沙箱API访问密钥，生产环境必须替换
+  apiKey: "#REPLACE_ME#"
+  # 代码执行的超时时间（秒）
+  workerTimeout: 15
+  pythonRequirements: |
+    # The requirements.txt file content
+    # For example:
+    # fastapi==0.104.1
+    # pydantic==2.5.1
+
+enterprise:
+  # 是否启用企业版功能
+  enabled: true
+  image:
+    # g-hsod9681-docker.pkg.coding.net/dify-artifact/dify/dify-enterprise
+    repository: langgenius/dify-enterprise
+    tag: "0.10.1"
+  replicas: 1
+  resources: {}
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  readinessProbe:
+    failureThreshold: 3
+    httpGet:
+      # 企业版健康检查路径
+      path: /v1/healthz
+      # 企业版服务端口
+      port: 8082
+      scheme: HTTP
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 3
+  livenessProbe:
+    failureThreshold: 3
+    httpGet:
+      path: /v1/healthz
+      port: 8082
+      scheme: HTTP
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 3
+  extraEnv:
+  appSecretKey: "#REPLACE_ME#"
+  # 管理员API密钥的盐值，用于生成管理员API密钥
+  adminAPIsSecretKeySalt: "#REPLACE_ME#"
+  innerApi:
+    # 企业版内部API配置
+    enabled: true
+    apiKey: "#REPLACE_ME#"
+  # CORS跨域允许的源地址，用于企业版前端
+  corsOrigins: "http://localhost:3000,http://localhost:3001,http://localhost:3002"
+  # 企业版专用的Kubernetes服务账户
+  serviceAccountName: "dify-enterprise"
+  # 许可证验证模式：online=在线验证，offline=离线验证
+  licenseMode: "online"
+  # 许可证验证服务器地址
+  licenseServer: "https://licenses.dify.ai/server"
+  # 控制台SSO是否跳过SSL证书验证（生产环境建议false）
+  consoleSSOSkipCertVerify: false
+  # Web SSO是否跳过SSL证书验证
+  webSSOSkipCertVerify: false
+  # HTTP服务器请求超时时间
+  serverTimeout: "10s"
+  # gRPC服务器请求超时时间
+  grpcServerTimeout: "10s"
+
+enterpriseAudit:
+  # 是否启用企业版审计功能，记录用户操作和系统事件
+  enabled: true
+  image:
+    # g-hsod9681-docker.pkg.coding.net/dify-artifact/dify/dify-audit
+    repository: langgenius/dify-audit
+  replicas: 1
+  resources: {}
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  readinessProbe:
+    failureThreshold: 3
+    httpGet:
+      path: /v1/healthz
+      # 审计服务端口
+      port: 8083
+      scheme: HTTP
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 3
+  livenessProbe:
+    failureThreshold: 3
+    httpGet:
+      path: /v1/healthz
+      port: 8083
+      scheme: HTTP
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 3
+  extraEnv:
+  scheduler:
+    # 审计日志固化定时任务Cron表达式：分钟 小时 日 月 周
+    solidifyCheckCron: "0 0 */1 * *" # minutes hours day-of-month month day-of-week
+    # 审计日志固化延迟天数，90天后固化到长期存储
+    solidifyDelayDays: 90
+    # 调度器任务超时时间
+    timeout: "600s"
+  mq:
+    # 消息队列检查间隔时间
+    checkInterval: "5s"
+    # 同步阈值，达到此数量时触发批量处理
+    syncThreshold: 200
+    # 消息队列最大等待时间
+    maxWait: "10s"
+  # 审计服务HTTP超时时间
+  serverTimeout: "10s"
+  # 审计服务gRPC超时时间
+  grpcServerTimeout: "10s"
+  # 审计日志下载超时时间
+  downloadTimeout: "60s"
+
+enterpriseFrontend:
+  # 是否启用企业版前端，提供企业版专用管理界面
+  enabled: true
+  image:
+    # g-hsod9681-docker.pkg.coding.net/dify-artifact/dify/dify-enterprise-frontend
+    repository: langgenius/dify-enterprise-frontend
+    tag: "0.10.1"
+  replicas: 1
+  resources: {}
+  serviceAccountName: ""
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  readinessProbe:
+    initialDelaySeconds: 3
+    failureThreshold: 3
+    periodSeconds: 10
+    successThreshold: 1
+    tcpSocket:
+      port: 3000
+    timeoutSeconds: 1
+  livenessProbe:
+    failureThreshold: 3
+    periodSeconds: 10
+    successThreshold: 1
+    tcpSocket:
+      port: 3000
+    timeoutSeconds: 1
+  extraEnv:
+  # Apply your own Environment Variables if necessary. Below is demo.
+  # extraEnv:
+  #   - name: ENV_FROM_COMMUNITY1
+  #     value: env123
+  #   - name: ENV_FROM_COMMUNITY2
+  #     value: env123
+
+ssrfProxy:
+  # 是否启用 SSRF 防护代理
+  enabled: true
+  image:
+    # g-hsod9681-docker.pkg.coding.net/dify-artifact/dify/squid
+    repository: ubuntu/squid
+    tag: "5.2-22.04_beta"
+  replicas: 1
+  resources: {}
+  serviceAccountName: ""
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  readinessProbe: {}
+  livenessProbe: {}
+  extraEnv:
+
+unstructured:
+  # 是否启用 Unstructured 文档处理服务，支持复杂文档格式解析
+  enabled: true
+  image:
+    # g-hsod9681-docker.pkg.coding.net/dify-artifact/dify/unstructured-api
+    repository: downloads.unstructured.io/unstructured-io/unstructured-api
+    tag: "0.0.70"
+  replicas: 1
+  resources: {}
+  serviceAccountName: ""
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  readinessProbe: {}
+  livenessProbe: {}
+  # unstructured_api_key:{ }
+  # Use the api key only if you are trying to access .ppt document analyze service provided by unstructured.io
+  extraEnv:
+
+plugin_daemon:
+  # 是否启用插件守护进程，支持第三方插件和工具扩展
+  enabled: true
+  replicas: 1
+  image:
+    # g-hsod9681-docker.pkg.coding.net/dify-artifact/dify/dify-plugin-daemon
+    repository: langgenius/dify-plugin-daemon
+  resources: {}
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  # 插件系统API访问密钥
+  apiKey: "#REPLACE_ME#"
+  # 插件最大启动时间（秒）
+  maxLaunchSeconds: 3600
+  # 是否强制验证插件数字签名，true=只允许经过验证的插件
+  forceVerifyingSignature: false
+  # NodePort / LoadBalancer
+  serviceType: "NodePort"
+  # loadbalancer or node ip
+  remoteInstallHost: "127.0.0.1"
+  # 远程安装服务端口
+  remoteInstallPort: "5003"
+  # 内部API通信密钥（示例值，生产环境需替换）
+  innerApiKey: QaHbTe77CtuXmsfyhR7+vRjI/+XbV1AaFy691iy+kGDv2Jvy0/eAh8Y1
+
+plugin_controller:
+  # 插件控制器副本数
+  replicas: 1
+  image:
+    # g-hsod9681-docker.pkg.coding.net/dify-artifact/dify/enterprise_plugin-crd
+    repository: langgenius/enterprise_plugin-crd
+  resources: {}
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+
+plugin_connector:
+  # 插件连接器副本数
+  replicas: 1
+  image:
+    # g-hsod9681-docker.pkg.coding.net/dify-artifact/dify/enterprise_plugin-connector
+    repository: langgenius/enterprise_plugin-connector
+  resources: {}
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  # 额外的标签配置
+  labels: {}
+  # 插件连接器API密钥
+  apiKey: "#REPLACE_ME#"
+  # 插件操作最大等待时间（秒）
+  maxWaitSeconds: 3600
+  # 自定义服务账户名称
+  customServiceAccount: ""
+  # 插件运行器使用的服务账户
+  runnerServiceAccount: ""
+  # 镜像仓库访问密钥名称
+  imageRepoSecret: "image-repo-secret"
+  # 镜像仓库前缀地址
+  imageRepoPrefix: "docker.io/your-image-repo-prefix"
+  # imageRepoType: docker / ecr
+  imageRepoType: docker
+  # AWS ECR区域配置（当使用ECR时）
+  ecrRegion: "us-east-1"
+  # g-hsod9681-docker.pkg.coding.net/dify-artifact/dify/nginx:1.27.3
+  gatewayImage: "nginx:1.27.3"
+  # g-hsod9681-docker.pkg.coding.net/dify-artifact/dify/executor:latest
+  shaderImage: "gcr.io/kaniko-project/executor:latest"
+  # g-hsod9681-docker.pkg.coding.net/dify-artifact/dify/busybox:latest
+  busyBoxImage: "busybox:latest"
+  # AWS CLI镜像，用于ECR操作
+  awsCliImage: "amazon/aws-cli:latest"
+  # g-hsod9681-docker.pkg.coding.net/dify-artifact/dify/plugin-build-base-python:3.13
+  # g-hsod9681-docker.pkg.coding.net/dify-artifact/dify/plugin-build-base-python:3.12
+  # g-hsod9681-docker.pkg.coding.net/dify-artifact/dify/plugin-build-base-python:3.11
+  # g-hsod9681-docker.pkg.coding.net/dify-artifact/dify/plugin-build-base-python:3.10
+  # 插件生成器配置，定义不同Python版本的构建镜像
+  generatorConf: |
+    generator:
+      repo: langgenius
+      python:
+        # Python包镜像源，留空使用默认源
+        pipMirror: ""
+        # 是否预编译Python包
+        preCompile: true
+        versions:
+          python3.13:
+            langgenius: docker.io/langgenius/plugin-build-base-python:3.13
+          python3.12:
+            langgenius: docker.io/langgenius/plugin-build-base-python:3.12
+          python3.11:
+            langgenius: docker.io/langgenius/plugin-build-base-python:3.11
+          python3.10:
+            langgenius: docker.io/langgenius/plugin-build-base-python:3.10
+
+gateway:
+  # 企业版网关服务副本数
+  replicas: 1
+  image:
+    # g-hsod9681-docker.pkg.coding.net/dify-artifact/dify/enterprise_gateway
+    repository: langgenius/enterprise_gateway
+  resources: {}
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+
+minio:
+  # MinIO Root用户名
+  rootUser: minioadmin
+  # MinIO 服务器的 root 密码。可以使用 \openssl rand -base64 32` 生成强密码`
+  rootPassword: NzGG+ngHuwz0xzMQ1XFt8JYCAxdrhnQ8/93LCggMt00=
+  # MinIO副本数量
+  replicas: 1
+  # MinIO运行模式：standalone=单机，distributed=分布式
+  mode: standalone
+  resources:
+    limits:
+      # CPU资源限制
+      cpu: 1000m
+      # 内存资源限制
+      memory: 2048Mi
+    requests:
+      # CPU资源请求
+      cpu: 500m
+      # 内存资源请求
+      memory: 1024Mi
+  persistence:
+    # 是否启用MinIO数据持久化
+    enabled: false
+
+###################################
+# Persistence Configration
+###################################
+persistence:
+  # The storage type support: local, s3, azure-blob, aliyun-oss, google-storage, tencent-cos volcengine-tos huawei-obs
+  type: "local"
+  local:
+    # 本地存储在容器内的挂载路径
+    mountPath: "/app/api/storage"
+    annotations:
+      # Helm资源保留策略，删除时保留数据
+      helm.sh/resource-policy: keep
+    persistentVolumeClaim:
+      # 现有PVC名称，留空则创建新的
+      existingClaim: ""
+      # 主机存储路径
+      hostPath: "/data/dify"
+      ## Dify App Data Persistent Volume Storage Class
+      ## If defined, storageClassName: <storageClass>
+      ## If set to "-", storageClassName: "", which disables dynamic provisioning
+      ## If undefined (the default) or set to null, no storageClassName spec is
+      ##   set, choosing the default provisioner.
+      ## ReadWriteMany access mode required for `api` and `worker`
+      ##
+      # 存储类名称
+      storageClass:
+      # 访问模式，API和Worker需要ReadWriteMany
+      accessModes: ReadWriteMany
+      # 存储大小
+      size: 5Gi
+      # 子路径
+      subPath: ""
+  s3:
+    # S3兼容存储端点，示例为 Cloudflare R2
+    endpoint: "https://xxx.r2.cloudflarestorage.com"
+    # S3访问密钥 ID
+    accessKey: "#REPLACE_ME#"
+    # S3秘密访问密钥
+    secretKey: "#REPLACE_ME#"
+    # S3区域
+    region: "us-east-1"
+    # S3存储桶名称
+    bucketName: "your-bucket-name"
+    # 地址类型，path或virtual-hosted
+    addressType: ""
+    # 是否使用 AWS 托管IAM
+    useAwsManagedIam: false
+    # 是否使用 AWS S3（而非其他S3兼容服务）
+    useAwsS3: true
+  azureBlob:
+    # Azure存储账户名称
+    accountName: ""
+    # Azure存储账户密钥
+    accountKey: ""
+    # Azure Blob容器名称
+    containerName: ""
+    # Azure存储账户 URL
+    accountUrl: ""
+  aliyunOss:
+    # 阿里云 OSS 端点
+    endpoint: "your-endpoint"
+    # OSS 存储桶名称
+    bucketName: "your-bucket-name"
+    # 阿里云访问密钥 ID
+    accessKey: "#REPLACE_ME#"
+    # 阿里云访问密钥 Secret
+    secretKey: "#REPLACE_ME#"
+    # OSS 区域
+    region: "ap-southeast-1"
+  googleStorage:
+    # Google Cloud Storage 存储桶名称
+    bucketName: "your-bucket-name"
+    # The service account JSON key file content, base64 encoded
+    serviceAccountJson: ""
+  tencentCos:
+    # 腾讯云COS存储桶名称
+    bucketName: "your-bucket-name"
+    # COS区域
+    region: ""
+    # 腾讯云SecretId
+    secretId: "#REPLACE_ME"
+    # 腾讯云SecretKey
+    secretKey: "#REPLACE_ME"
+    # 访问协议：http或https
+    scheme: "https"
+  huaweiObs:
+    # 华为云OBS服务器地址
+    server: "your-server-url"
+    # OBS存储桶名称
+    bucketName: "your-bucket-name"
+    # 华为云访问密钥ID
+    accessKey: "#REPLACE_ME#"
+    # 华为云秘密访问密钥
+    secretKey: "#REPLACE_ME#"
+  volcengineTos:
+    # 火山引擎TOS存储桶名称
+    bucketName: "your-bucket-name"
+    # 火山引擎访问密钥ID
+    accessKey: "#REPLACE_ME#"
+    # 火山引擎秘密访问密钥
+    secretKey: "#REPLACE_ME#"
+    # TOS端点地址
+    endpoint: "tos-endpoint"
+    # TOS区域
+    region: "your-region"
+
+###################################
+# Mail Configuration
+###################################
+mail:
+  # 邮件配置类型，支持：resend、smtp
+  type: ""
+  # 默认发件人邮箱地址（当未指定具体地址时使用）
+  defaultSender: "YOUR EMAIL FROM (eg: no-reply <no-reply@dify.ai>)"
+  # Resend 服务配置（https://resend.com）
+  resend:
+    # Resend邮件服务API密钥
+    apiKey: ""
+    # Resend API地址
+    apiUrl: https://api.resend.com
+  smtp:
+    # SMTP服务器地址
+    server: ""
+    # SMTP服务器端口
+    port: 587
+    # SMTP用户名
+    username: ""
+    # SMTP密码
+    password: ""
+    # 是否使用TLS加密
+    useTLS: false
+
+###################################
+# External postgres
+###################################
+externalPostgres:
+  # 是否使用外部PostgreSQL数据库
+  enabled: false
+  # PostgreSQL服务器地址
+  address: localhost
+  # PostgreSQL端口
+  port: 5432
+  credentials:
+    dify:
+      # Dify主数据库名称
+      database: "dify"
+      # 数据库用户名
+      username: "postgres"
+      # 数据库密码
+      password: "#REPLACE_ME#"
+      # SSL模式：require, prefer, disable等
+      sslmode: "require"
+      # extras: "options=-c search_path=your-schema -c your-other-option=xxx"
+      extras: ""
+      # 字符集
+      charset: ""
+      # URI方案
+      uriScheme: "postgresql"
+    plugin_daemon:
+      # 插件守护进程数据库名称
+      database: "dify_plugin_daemon"
+      username: "postgres"
+      password: "#REPLACE_ME#"
+      sslmode: "require"
+      # extras: "options=-c search_path=your-schema -c your-other-option=xxx"
+      extras: ""
+      charset: ""
+      uriScheme: "postgresql"
+    enterprise:
+      # 企业版数据库名称
+      database: "enterprise"
+      username: "postgres"
+      password: "#REPLACE_ME#"
+      sslmode: "require"
+      # extras: "options=-c search_path=your-schema -c your-other-option=xxx"
+      extras: ""
+      charset: ""
+      uriScheme: "postgresql"
+    audit:
+      # 审计数据库名称
+      database: "audit"
+      username: "postgres"
+      password: "#REPLACE_ME#"
+      sslmode: "require"
+      # extras: "options=-c search_path=your-schema -c your-other-option=xxx"
+      extras: ""
+      charset: ""
+      uriScheme: "postgresql"
+
+postgresql:
+  # 是否启用内置PostgreSQL
+  enabled: false
+  # PostgreSQL实例名称
+  name: postgres
+  global:
+    # 存储类配置
+    storageClass: ""
+    postgresql:
+      auth:
+        # PostgreSQL超级用户密码
+        postgresPassword: "#REPLACE_ME#"
+        # 默认数据库名称
+        database: "dify"
+  #        username: ""
+  #        password: ""
+  primary:
+    initdb:
+      # 数据库初始化脚本
+      scripts:
+        my_init_script.sh: |
+          #!/bin/bash
+          set -e
+          echo "Creating database..."
+          PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -U postgres << 'EOF'
+          SELECT 'CREATE DATABASE enterprise' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'enterprise')\gexec
+          SELECT 'CREATE DATABASE audit' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'audit')\gexec
+          EOF
+
+###################################
+# External Redis
+###################################
+externalRedis:
+  # 是否使用外部Redis
+  enabled: true
+  # 是否使用SSL连接Redis
+  useSSL: false
+
+  # Redis服务器地址
+  host: "redis.example"
+  # Redis端口
+  port: 6379
+  # Redis用户名（Redis 6.0+）
+  username: ""
+  # Redis密码
+  password: "#REPLACE_ME#"
+  # Redis数据库编号
+  db: 0
+
+  sentinel:
+    # 是否启用 Redis Sentinel 模式
+    enabled: false
+    # Redis Sentinel 节点列表（用英文逗号分隔，格式为 host:port）
+    nodes: ""
+    # Redis Sentinel 中监控的服务名称
+    serviceName: ""
+    # Sentinel 用户名
+    username: ""
+    # Sentinel 密码
+    password: "#REPLACE_ME#"
+    # Redis Sentinel 连接的 socket 超时时间（单位：秒）
+    socketTimeout: 0.1
+
+  cluster:
+    # 是否启用 Redis 集群模式
+    enabled: false
+    # Redis 集群节点列表（用英文逗号分隔，格式为 host:port）
+    nodes: "#REPLACE_ME#"
+    # Redis 集群密码
+    password: "#REPLACE_ME#"
+
+redis:
+  # 是否启用内置Redis
+  enabled: false
+  global:
+    redis:
+      # 内置Redis密码
+      password: "#REPLACE_ME#"
+
+###################################
+# vectorDB
+###################################
+vectorDB:
+  # 是否使用外部向量数据库
+  useExternal: true
+  # 向量数据库的类型，支持列表：https://enterprise-docs.dify.ai/versions/3-0-x/zh-cn/deployment/advanced-configuration/vector-database
+  externalWeaviate:
+    # Weaviate服务端点
+    endpoint: "http://weaviate:8080"
+    # Weaviate API密钥
+    apiKey: "#REPLACE_ME#"
+  # External Qdrant
+  externalQdrant:
+    # Qdrant服务端点
+    endpoint: "http://your-qdrant-cluster-url.qdrant.tech/"
+    # Qdrant API密钥
+    apiKey: "#REPLACE_ME#"
+  # External Milvus
+  externalMilvus:
+    # URI for connecting to the Milvus server (e.g., 'http://localhost:19530' or 'https://milvus-instance.example.com:19530')
+    uri: "http://127.0.0.1:19530"
+    # Milvus访问令牌
+    token: ""
+    # Milvus用户名
+    user: ""
+    # Milvus密码
+    password: ""
+    # Milvus数据库名称
+    database: "default"
+  externalRelyt:
+    # Relyt数据库主机地址
+    host: "your-relyt.domain"
+    # Relyt端口
+    port: 5431
+    # 用户名
+    user: "postgres"
+    # 密码
+    password: "#REPLACE_ME#"
+    # 数据库名称
+    database: "pgvectors"
+  externalPgVectoRS:
+    # PgVecto-RS数据库主机
+    host: "your-pgvectors.domain"
+    # 端口
+    port: 5432
+    # 用户名
+    user: "postgres"
+    # 密码
+    password: "#REPLACE_ME#"
+    # 数据库名称
+    database: "pgvectors"
+  externalTencentVectorDB:
+    # 腾讯向量数据库主机
+    host: "your-tencent-vector-db.domain"
+    # API密钥
+    apiKey: "#REPLACE_ME#"
+    # 连接超时时间
+    timeout: 30
+    # 用户名
+    username: "tencent"
+    # 密码
+    password: "#REPLACE_ME#"
+    # 分片数量
+    shard: 1
+    # 副本数量
+    replicas: 2
+    # 数据库名称
+    database: "tencent"
+  externalOpenSearch:
+    # OpenSearch主机地址
+    host: "your-opensearch.domain"
+    # OpenSearch端口
+    port: 9200
+    # 用户名
+    user: ""
+    # 密码
+    password: "#REPLACE_ME#"
+    # 是否使用TLS
+    useTLS: false
+  externalElasticsearch:
+    # Elasticsearch主机地址
+    host: "127.0.0.1"
+    # Elasticsearch端口
+    port: 9200
+    # 用户名
+    username: "elastic"
+    # 密码
+    password: "#REPLACE_ME#"
+  externalAnalyticDB:
+    # 阿里云AnalyticDB密钥ID
+    keyID: "#REPLACE_ME#"
+    # 密钥Secret
+    keySecret: "#REPLACE_ME#"
+    # 区域ID
+    regionID: "#REPLACE_ME#"
+    # 实例ID
+    instanceID: "#REPLACE_ME#"
+    # 账户名
+    account: "#REPLACE_ME#"
+    # 密码
+    password: "#REPLACE_ME#"
+    # 主机地址
+    host: "#REPLACE_ME#"
+    # 端口
+    port: 5432
+    # 命名空间
+    namespace: ""
+    # 命名空间密码
+    namespacePassword: ""
+    # 最小连接数
+    minConnection: 1
+    # 最大连接数
+    maxConnection: 5
+
+qdrant:
+  # 是否启用内置Qdrant向量数据库
+  enabled: false
+  # Qdrant副本数量
+  replicaCount: 3
+  image:
+    repository: langgenius/qdrant
+    pullPolicy: IfNotPresent
+    tag: "v1.7.3"
+  # Qdrant API密钥
+  apiKey: "dify123456"
+  persistence:
+    # 存储访问模式
+    accessModes: ["ReadWriteOnce"]
+    # 存储大小
+    size: 10Gi
+  resources:
+    {}
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+weaviate:
+  # 是否启用内置Weaviate向量数据库
+  enabled: false
+
+# Docker镜像拉取密钥列表
+imagePullSecrets: []

@@ -7,6 +7,13 @@ variable "environment" {
   }
 }
 
+variable "prefix" {
+  description = "Prefix for resouce naming (default as dify)"
+  type        = string
+  default     = "dify"
+}
+
+
 variable "aws_region" {
   description = "AWS region"
   type        = string
@@ -129,6 +136,16 @@ variable "cluster_version" {
   description = "EKS cluster version"
   type        = string
   default     = "1.28"
+}
+
+variable "eks_arch" {
+  description = "EKS worker node architecture. Allowed values: 'amd64' or 'arm64'"
+  type        = string
+  default     = "arm64"
+  validation {
+    condition     = contains(["amd64", "arm64"], var.eks_arch)
+    error_message = "eks_arch must be either 'amd64' or 'arm64'."
+  }
 }
 
 # Node Group Configuration (环境自动配置)

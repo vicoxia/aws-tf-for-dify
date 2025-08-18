@@ -1,6 +1,6 @@
 # ECR Repository for main Dify application
 resource "aws_ecr_repository" "dify" {
-  name                 = "dify-${var.environment}"
+  name                 = "${var.prefix}-${var.environment}"
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
@@ -8,7 +8,7 @@ resource "aws_ecr_repository" "dify" {
   }
 
   tags = {
-    Name        = "dify-${var.environment}-ecr"
+    Name        = "${var.prefix}-${var.environment}-ecr"
     Environment = var.environment
   }
 }
@@ -37,7 +37,7 @@ resource "aws_ecr_lifecycle_policy" "dify" {
 
 # ECR Repository for Dify EE plugins
 resource "aws_ecr_repository" "dify_ee_plugin" {
-  name                 = "dify-ee-plugin-repo-${lower(replace(aws_eks_cluster.main.name, "_", "-"))}"
+  name                 = "${var.prefix}-ee-plugin-repo-${lower(replace(aws_eks_cluster.main.name, "_", "-"))}"
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
@@ -45,7 +45,7 @@ resource "aws_ecr_repository" "dify_ee_plugin" {
   }
 
   tags = {
-    Name        = "dify-${var.environment}-ee-plugin-ecr"
+    Name        = "${var.prefix}-${var.environment}-ee-plugin-ecr"
     Environment = var.environment
     Purpose     = "DifyEE-Plugin-Storage"
   }
@@ -60,9 +60,9 @@ resource "aws_ecr_lifecycle_policy" "dify_ee_plugin" {
         rulePriority = 1
         description  = "Keep last 20 plugin images"
         selection = {
-          tagStatus     = "any"
-          countType     = "imageCountMoreThan"
-          countNumber   = 20
+          tagStatus   = "any"
+          countType   = "imageCountMoreThan"
+          countNumber = 20
         }
         action = {
           type = "expire"

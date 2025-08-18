@@ -1,21 +1,21 @@
 locals {
   opensearch_subnets = length(var.opensearch_subnets) > 0 ? var.opensearch_subnets : (local.create_vpc ? aws_subnet.private[*].id : [])
-  
+
   # Environment-specific OpenSearch configurations
   opensearch_config = var.environment == "test" ? {
-    instance_type  = "m6g.large.search"  # 4 vCPU, 8 GB RAM (Graviton)
-    instance_count = 1
+    instance_type   = "m6g.large.search" # 4 vCPU, 8 GB RAM (Graviton)
+    instance_count  = 1
     ebs_volume_size = 100
-  } : {
-    instance_type  = "m6g.4xlarge.search"  # 16 vCPU, 64 GB RAM (Graviton)
-    instance_count = 3
+    } : {
+    instance_type   = "m6g.4xlarge.search" # 16 vCPU, 64 GB RAM (Graviton)
+    instance_count  = 3
     ebs_volume_size = 100
   }
 }
 
 # OpenSearch Security Group
 resource "aws_security_group" "opensearch" {
-  name_prefix = "${var.cluster_name}-opensearch-"
+  name_prefix = "${var.prefix}-${var.environment}-${var.cluster_name}-opensearch-"
   vpc_id      = local.vpc_id
 
   ingress {
@@ -40,7 +40,7 @@ resource "aws_security_group" "opensearch" {
   }
 
   tags = {
-    Name        = "${var.cluster_name}-opensearch-sg"
+    Name        = "${var.prefix}-${var.environment}-${var.cluster_name}-opensearch-sg"
     Environment = var.environment
   }
 }
@@ -85,7 +85,7 @@ resource "aws_opensearch_domain" "main" {
     internal_user_database_enabled = true
     master_user_options {
       master_user_name     = "admin"
-      master_user_password = "DifyOpenSearchPass123!"  # 请修改为您的密码
+      master_user_password = "DifyOpenSearchPass123!" # 请修改为您的密码
     }
   }
 
@@ -98,13 +98,13 @@ resource "aws_opensearch_domain" "main" {
           AWS = "*"
         }
         Action   = "es:*"
-        Resource = "arn:aws:es:${var.aws_region}:${var.aws_account_id}:domain/dify-${var.environment}-opensearch/*"
+        Resource = "arn:aws:es:${var.aws_region}:${var.aws_account_id}:domain/${var.cluster_name}-opensearch/*"
       }
     ]
   })
 
   tags = {
-    Name        = "${var.cluster_name}-opensearch"
+    Name        = "${var.prefix}-${var.environment}-${var.cluster_name}-opensearch"
     Environment = var.environment
   }
 }
