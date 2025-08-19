@@ -85,13 +85,14 @@ install_cert_manager = true
 cert_manager_version = "v1.13.2"
 
 # ──────────────── Helm仓库配置 ────────────────
-# Helm仓库地址会根据aws_region自动选择：
-# - 全球区域：使用官方仓库（如 https://aws.github.io/eks-charts）
-# - 中国区域：使用阿里云镜像仓库（如 https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts）
+# 默认使用官方仓库，大多数情况下在中国区也可访问：
+# - AWS Load Balancer Controller: https://aws.github.io/eks-charts
+# - NGINX Ingress Controller: https://kubernetes.github.io/ingress-nginx
+# - Cert-Manager: https://charts.jetstack.io
 # 
-# 如需自定义仓库地址，可取消注释以下配置：
+# 如果网络访问有问题，可自定义仓库地址：
 # custom_helm_repositories = {
-#   aws_load_balancer_controller = "https://your-custom-repo.com/charts"
+#   aws_load_balancer_controller = "https://mirror.azure.cn/kubernetes/charts/"
 #   nginx_ingress               = "https://your-custom-repo.com/charts"  
 #   cert_manager               = "https://your-custom-repo.com/charts"
 # }

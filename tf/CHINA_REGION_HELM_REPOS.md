@@ -30,12 +30,16 @@ AWS 中国区与全球区域存在以下差异：
 
 当检测到中国区域时，系统会自动进行以下配置：
 
-#### Helm 镜像仓库
-| 组件 | 全球区域仓库 | 中国区域镜像仓库 |
-|------|-------------|-----------------|
-| AWS Load Balancer Controller | `https://aws.github.io/eks-charts` | `https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts` |
-| NGINX Ingress Controller | `https://kubernetes.github.io/ingress-nginx` | `https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts` |
-| Cert-Manager | `https://charts.jetstack.io` | `https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts` |
+#### Helm 仓库配置
+| 组件 | 仓库地址 | 中国区访问性 |
+|------|---------|-------------|
+| AWS Load Balancer Controller | `https://aws.github.io/eks-charts` | ⚠️ 可能需要代理 |
+| NGINX Ingress Controller | `https://kubernetes.github.io/ingress-nginx` | ✅ 通常可访问 |
+| Cert-Manager | `https://charts.jetstack.io` | ✅ 通常可访问 |
+
+**注意**: 当前配置对所有区域使用相同的官方仓库，因为：
+1. 大多数官方仓库在中国区是可访问的
+2. 专门的中国区镜像仓库可能不包含最新的 AWS 特定 Charts
 
 #### ARN 格式调整
 | 服务 | 全球区域格式 | 中国区域格式 |
@@ -43,22 +47,33 @@ AWS 中国区与全球区域存在以下差异：
 | IAM 策略 | `arn:aws:iam::aws:policy/...` | `arn:aws-cn:iam::aws:policy/...` |
 | OpenSearch | `arn:aws:es:region:account:domain/...` | `arn:aws-cn:es:region:account:domain/...` |
 
-## 其他可用的中国区镜像仓库
+## 中国区 Helm 仓库选项
 
-### 1. 阿里云镜像仓库
+### 1. 官方仓库（推荐）
+大多数情况下，官方仓库在中国区是可访问的：
+- `https://aws.github.io/eks-charts` - AWS Load Balancer Controller
+- `https://kubernetes.github.io/ingress-nginx` - NGINX Ingress
+- `https://charts.jetstack.io` - Cert-Manager
+
+### 2. 备用镜像仓库
+如果官方仓库不可访问，可以尝试：
+
+#### Azure 中国镜像
 ```
-https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts
+https://mirror.azure.cn/kubernetes/charts/
+```
+⚠️ 注意：此仓库主要包含旧版本的 Kubernetes Charts，可能不包含 AWS Load Balancer Controller
+
+#### 华为云镜像
+```
+https://mirrors.huaweicloud.com/repository/chartrepo/public/
 ```
 
-### 2. 华为云镜像仓库
-```
-https://repo.huaweicloud.com/chartrepo/public
-```
-
-### 3. 腾讯云镜像仓库
-```
-https://mirrors.cloud.tencent.com/chartrepo/public
-```
+### 3. 替代方案
+如果 AWS Load Balancer Controller 无法安装：
+- 使用 NGINX Ingress Controller 替代
+- 手动下载并部署 YAML 文件
+- 使用 Kubernetes 原生的 Service LoadBalancer
 
 ## 自定义仓库配置
 

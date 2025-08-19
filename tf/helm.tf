@@ -11,18 +11,19 @@ locals {
   # 默认Helm仓库配置（根据区域自动选择）
   default_helm_repositories = {
     # AWS Load Balancer Controller
+    # 注意：中国区可能需要网络代理或使用替代方案
     aws_load_balancer_controller = local.is_china_region ? 
-      "https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts" : 
+      "https://aws.github.io/eks-charts" : 
       "https://aws.github.io/eks-charts"
     
     # NGINX Ingress Controller  
     nginx_ingress = local.is_china_region ?
-      "https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts" :
+      "https://kubernetes.github.io/ingress-nginx" :
       "https://kubernetes.github.io/ingress-nginx"
     
     # Cert-Manager
     cert_manager = local.is_china_region ?
-      "https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts" :
+      "https://charts.jetstack.io" :
       "https://charts.jetstack.io"
   }
   
