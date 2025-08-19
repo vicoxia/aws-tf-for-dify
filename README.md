@@ -4,6 +4,20 @@
 
 ## 🔧 完整部署流程
 
+### 安装前准备（Amazon Linux 2023)
+# 安装 yum-config-manager
+sudo yum install -y yum-utils
+
+# 添加 HashiCorp 官方仓库
+sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+
+# 安装 Terraform
+sudo yum -y install terraform
+
+# 验证安装
+terraform --version
+
+
 ### 阶段一：部署AWS基础设施
 
 ```bash
@@ -12,7 +26,7 @@ git clone <repository-url>
 cd dify-aws-terraform
 
 # 2. 确认权限
-
+# 修改脚本中的$REGION为需要测试的区域，比如中国区：cn-northwest-1
 bash tf/check_aws_permissions.sh
 
 # 3. 配置变量

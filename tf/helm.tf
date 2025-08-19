@@ -4,6 +4,45 @@
 # 用户可以通过变量控制是否安装这些组件
 #
 
+# 根据区域选择合适的Helm仓库地址
+locals {
+  is_china_region = contains(["cn-north-1", "cn-northwest-1"], var.aws_region)
+  
+  # 默认Helm仓库配置（根据区域自动选择）
+  default_helm_repositories = {
+    # AWS Load Balancer Controller
+    aws_load_balancer_controller = local.is_china_region ? 
+      "https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts" : 
+      "https://aws.github.io/eks-charts"
+    
+    # NGINX Ingress Controller  
+    nginx_ingress = local.is_china_region ?
+      "https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts" :
+      "https://kubernetes.github.io/ingress-nginx"
+    
+    # Cert-Manager
+    cert_manager = local.is_china_region ?
+      "https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts" :
+      "https://charts.jetstack.io"
+  }
+  
+  # 最终Helm仓库配置（用户自定义优先）
+  helm_repositories = {
+    aws_load_balancer_controller = coalesce(
+      var.custom_helm_repositories.aws_load_balancer_controller,
+      local.default_helm_repositories.aws_load_balancer_controller
+    )
+    nginx_ingress = coalesce(
+      var.custom_helm_repositories.nginx_ingress,
+      local.default_helm_repositories.nginx_ingress
+    )
+    cert_manager = coalesce(
+      var.custom_helm_repositories.cert_manager,
+      local.default_helm_repositories.cert_manager
+    )
+  }
+}
+
 # ──────────────── AWS Load Balancer Controller ────────────────
 # 为ALB/NLB Ingress提供支持
 
@@ -11,7 +50,7 @@ resource "helm_release" "aws_load_balancer_controller" {
   count = var.install_aws_load_balancer_controller ? 1 : 0
 
   name       = "aws-load-balancer-controller"
-  repository = "https://aws.github.io/eks-charts"
+  repository = local.helm_repositories.aws_load_balancer_controller
   chart      = "aws-load-balancer-controller"
   version    = var.aws_load_balancer_controller_version
   namespace  = "kube-system"
@@ -360,7 +399,7 @@ resource "helm_release" "nginx_ingress" {
   count = var.install_nginx_ingress ? 1 : 0
 
   name       = "nginx-ingress"
-  repository = "https://kubernetes.github.io/ingress-nginx"
+  repository = local.helm_repositories.nginx_ingress
   chart      = "ingress-nginx"
   version    = var.nginx_ingress_version
   namespace  = "ingress-nginx"
@@ -391,7 +430,7 @@ resource "helm_release" "cert_manager" {
   count = var.install_cert_manager ? 1 : 0
 
   name       = "cert-manager"
-  repository = "https://charts.jetstack.io"
+  repository = local.helm_repositories.cert_manager
   chart      = "cert-manager"
   version    = var.cert_manager_version
   namespace  = "cert-manager"

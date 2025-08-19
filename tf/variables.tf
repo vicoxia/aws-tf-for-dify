@@ -70,10 +70,15 @@ variable "rds_public_accessible" {
   default     = false
 }
 
-variable "aws_eks_chart_repo_url" {
-  description = "AWS EKS Helm chart repository URL (for China regions)"
-  type        = string
-  default     = ""
+# ──────────────── Helm Repository Configuration ────────────────
+variable "custom_helm_repositories" {
+  description = "Custom Helm repository URLs (optional, overrides automatic region detection)"
+  type = object({
+    aws_load_balancer_controller = optional(string)
+    nginx_ingress               = optional(string)
+    cert_manager               = optional(string)
+  })
+  default = {}
 }
 
 # ──────────────── Helm Chart Configuration ────────────────
@@ -283,3 +288,4 @@ variable "ecr_image_tag_mutability" {
   type        = string
   default     = "MUTABLE"
 }
+

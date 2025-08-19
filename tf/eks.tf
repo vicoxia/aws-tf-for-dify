@@ -2,6 +2,18 @@ locals {
   cluster_subnets = length(var.eks_cluster_subnets) > 0 ? var.eks_cluster_subnets : (local.create_vpc ? aws_subnet.private[*].id : [])
   node_subnets    = length(var.eks_nodes_subnets) > 0 ? var.eks_nodes_subnets : (local.create_vpc ? aws_subnet.private[*].id : [])
 
+  # 根据区域自动选择IAM策略ARN格式
+  is_china_region = contains(["cn-north-1", "cn-northwest-1"], var.aws_region)
+  arn_prefix      = local.is_china_region ? "arn:aws-cn" : "arn:aws"
+  
+  # IAM策略ARN配置
+  iam_policy_arns = {
+    eks_cluster_policy            = "${local.arn_prefix}:iam::aws:policy/AmazonEKSClusterPolicy"
+    eks_worker_node_policy        = "${local.arn_prefix}:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+    eks_cni_policy               = "${local.arn_prefix}:iam::aws:policy/AmazonEKS_CNI_Policy"
+    eks_container_registry_policy = "${local.arn_prefix}:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  }
+
   # 环境特定的节点配置，随架构切换
   node_config = var.environment == "test" ? (
     var.eks_arch == "amd64" ? {
@@ -49,7 +61,7 @@ resource "aws_iam_role" "eks_cluster" {
 }
 
 resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+  policy_arn = local.iam_policy_arns.eks_cluster_policy
   role       = aws_iam_role.eks_cluster.name
 }
 
@@ -72,17 +84,17 @@ resource "aws_iam_role" "eks_node_group" {
 }
 
 resource "aws_iam_role_policy_attachment" "eks_worker_node_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  policy_arn = local.iam_policy_arns.eks_worker_node_policy
   role       = aws_iam_role.eks_node_group.name
 }
 
 resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  policy_arn = local.iam_policy_arns.eks_cni_policy
   role       = aws_iam_role.eks_node_group.name
 }
 
 resource "aws_iam_role_policy_attachment" "eks_container_registry_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  policy_arn = local.iam_policy_arns.eks_container_registry_policy
   role       = aws_iam_role.eks_node_group.name
 }
 

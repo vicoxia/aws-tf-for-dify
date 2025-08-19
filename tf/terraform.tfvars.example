@@ -57,6 +57,16 @@ s3_versioning_enabled = true
 ecr_repository_name = "dify"
 ecr_image_tag_mutability = "MUTABLE"
 
+# ──────────────── ARN格式自动配置 ────────────────
+# 所有AWS服务的ARN格式会根据aws_region自动选择：
+# - 全球区域（如us-east-1）：arn:aws:...
+# - 中国区域（cn-north-1, cn-northwest-1）：arn:aws-cn:...
+# 
+# 涉及的服务包括：
+# - IAM策略ARN：arn:aws(-cn):iam::aws:policy/...
+# - OpenSearch ARN：arn:aws(-cn):es:region:account:domain/...
+# 无需手动配置，系统会自动处理
+
 # ──────────────── Kubernetes基础组件 ────────────────
 # Dify命名空间
 dify_namespace = "dify"
@@ -73,6 +83,18 @@ nginx_ingress_version = "4.8.3"
 # Cert-Manager（SSL证书管理）
 install_cert_manager = true
 cert_manager_version = "v1.13.2"
+
+# ──────────────── Helm仓库配置 ────────────────
+# Helm仓库地址会根据aws_region自动选择：
+# - 全球区域：使用官方仓库（如 https://aws.github.io/eks-charts）
+# - 中国区域：使用阿里云镜像仓库（如 https://kubernetes.oss-cn-hangzhou.aliyuncs.com/charts）
+# 
+# 如需自定义仓库地址，可取消注释以下配置：
+# custom_helm_repositories = {
+#   aws_load_balancer_controller = "https://your-custom-repo.com/charts"
+#   nginx_ingress               = "https://your-custom-repo.com/charts"  
+#   cert_manager               = "https://your-custom-repo.com/charts"
+# }
 
 
 

@@ -1,6 +1,10 @@
 locals {
   opensearch_subnets = length(var.opensearch_subnets) > 0 ? var.opensearch_subnets : (local.create_vpc ? aws_subnet.private[*].id : [])
 
+  # 根据区域自动选择ARN格式
+  is_china_region = contains(["cn-north-1", "cn-northwest-1"], var.aws_region)
+  arn_prefix      = local.is_china_region ? "arn:aws-cn" : "arn:aws"
+
   # Environment-specific OpenSearch configurations
   opensearch_config = var.environment == "test" ? {
     instance_type   = "m6g.large.search" # 4 vCPU, 8 GB RAM (Graviton)
@@ -98,7 +102,7 @@ resource "aws_opensearch_domain" "main" {
           AWS = "*"
         }
         Action   = "es:*"
-        Resource = "arn:aws:es:${var.aws_region}:${var.aws_account_id}:domain/${var.cluster_name}-opensearch/*"
+        Resource = "${local.arn_prefix}:es:${var.aws_region}:${var.aws_account_id}:domain/${var.cluster_name}-opensearch/*"
       }
     ]
   })

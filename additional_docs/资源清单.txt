@@ -47,10 +47,11 @@ EKS_NODES_SUBNETS: Subnet IDs for the EKS worker nodes. Requires at least 2 subn
 REDIS_SUBNETS: Subnet IDs for Redis deployment.
 RDS_SUBNETS: subnet ids for RDS database. (At least 2 with different AZs)
 OPENSEARCH_SUBNETS: Subnet IDs for OpenSearch deployment.
-OPENSEARCH_ADMINNAME: OpenSearch Domain master ame.
+OPENSEARCH_ADMINNAME: OpenSearch Domain master name.
 OPENSEARCH_PASSWORD: OpenSearch Domain master password.
-AWS_EKS_CHART_REPO_URL: (For AWS China regions ONLY) The AWS EKS Helm chart repository URL.
 
 RDS_PUBLIC_ACCESSIBLE: Set to true to make RDS publicly accessible (NOT RECOMMENDED).
+
+注意：AWS中国区的Helm仓库配置现在通过Terraform自动处理，系统会根据aws_region自动选择合适的仓库地址。
 
 5. 需要编写部署手册，包括所有需要的命令和工具的安装（考虑部署在aws海外区域和aws中国区域）
