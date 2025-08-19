@@ -2,10 +2,6 @@ locals {
   cluster_subnets = length(var.eks_cluster_subnets) > 0 ? var.eks_cluster_subnets : (local.create_vpc ? aws_subnet.private[*].id : [])
   node_subnets    = length(var.eks_nodes_subnets) > 0 ? var.eks_nodes_subnets : (local.create_vpc ? aws_subnet.private[*].id : [])
 
-  # 根据区域自动选择IAM策略ARN格式
-  is_china_region = contains(["cn-north-1", "cn-northwest-1"], var.aws_region)
-  arn_prefix      = local.is_china_region ? "arn:aws-cn" : "arn:aws"
-  
   # IAM策略ARN配置
   iam_policy_arns = {
     eks_cluster_policy            = "${local.arn_prefix}:iam::aws:policy/AmazonEKSClusterPolicy"
