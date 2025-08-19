@@ -85,12 +85,31 @@ wait_for_cluster() {
     exit 1
 }
 
+# 检查是否为中国区域
+is_china_region() {
+    case "$AWS_REGION" in
+        cn-north-1|cn-northwest-1)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
 # 使用RDS Data API执行SQL
 execute_sql() {
     local sql_statement="$1"
     local database_name="${2:-postgres}"
     
     print_info "执行SQL: $sql_statement"
+    
+    # 检查中国区域是否支持 RDS Data API
+    if is_china_region; then
+        print_warning "检测到中国区域 ($AWS_REGION)，RDS Data API 可能不可用"
+        print_warning "尝试使用传统方式创建数据库..."
+        return 1
+    fi
     
     local result
     result=$(aws rds-data execute-statement \
@@ -113,6 +132,11 @@ execute_sql() {
 # 检查数据库是否存在
 check_database_exists() {
     local db_name="$1"
+    
+    # 中国区域跳过检查，直接尝试创建
+    if is_china_region; then
+        return 1  # 假设数据库不存在，尝试创建
+    fi
     
     local sql="SELECT 1 FROM pg_database WHERE datname = '$db_name';"
     
@@ -145,6 +169,15 @@ create_database_if_not_exists() {
     local db_name="$1"
     
     print_info "检查数据库: $db_name"
+    
+    # 中国区域处理
+    if is_china_region; then
+        print_warning "中国区域 ($AWS_REGION) 不支持 RDS Data API"
+        print_warning "数据库 $db_name 需要手动创建或使用其他方式"
+        print_info "请在 Aurora 集群可用后，手动连接数据库并执行："
+        print_info "  CREATE DATABASE \"$db_name\";"
+        return 0  # 返回成功，避免阻塞部署
+    fi
     
     if check_database_exists "$db_name"; then
         print_warning "数据库 $db_name 已存在，跳过创建"

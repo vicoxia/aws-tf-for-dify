@@ -214,7 +214,7 @@ resource "aws_iam_policy" "aws_load_balancer_controller" {
         Action = [
           "ec2:CreateTags"
         ]
-        Resource = "arn:aws:ec2:*:*:security-group/*"
+        Resource = "${local.arn_prefix}:ec2:*:*:security-group/*"
         Condition = {
           StringEquals = {
             "ec2:CreateAction" = "CreateSecurityGroup"
@@ -230,7 +230,7 @@ resource "aws_iam_policy" "aws_load_balancer_controller" {
           "ec2:CreateTags",
           "ec2:DeleteTags"
         ]
-        Resource = "arn:aws:ec2:*:*:security-group/*"
+        Resource = "${local.arn_prefix}:ec2:*:*:security-group/*"
         Condition = {
           Null = {
             "aws:RequestTag/elbv2.k8s.aws/cluster"  = "true"
@@ -282,9 +282,9 @@ resource "aws_iam_policy" "aws_load_balancer_controller" {
           "elasticloadbalancing:RemoveTags"
         ]
         Resource = [
-          "arn:aws:elasticloadbalancing:*:*:targetgroup/*/*",
-          "arn:aws:elasticloadbalancing:*:*:loadbalancer/net/*/*",
-          "arn:aws:elasticloadbalancing:*:*:loadbalancer/app/*/*"
+          "${local.arn_prefix}:elasticloadbalancing:*:*:targetgroup/*/*",
+          "${local.arn_prefix}:elasticloadbalancing:*:*:loadbalancer/net/*/*",
+          "${local.arn_prefix}:elasticloadbalancing:*:*:loadbalancer/app/*/*"
         ]
         Condition = {
           Null = {
@@ -300,10 +300,10 @@ resource "aws_iam_policy" "aws_load_balancer_controller" {
           "elasticloadbalancing:RemoveTags"
         ]
         Resource = [
-          "arn:aws:elasticloadbalancing:*:*:listener/net/*/*/*",
-          "arn:aws:elasticloadbalancing:*:*:listener/app/*/*/*",
-          "arn:aws:elasticloadbalancing:*:*:listener-rule/net/*/*/*",
-          "arn:aws:elasticloadbalancing:*:*:listener-rule/app/*/*/*"
+          "${local.arn_prefix}:elasticloadbalancing:*:*:listener/net/*/*/*",
+          "${local.arn_prefix}:elasticloadbalancing:*:*:listener/app/*/*/*",
+          "${local.arn_prefix}:elasticloadbalancing:*:*:listener-rule/net/*/*/*",
+          "${local.arn_prefix}:elasticloadbalancing:*:*:listener-rule/app/*/*/*"
         ]
       },
       {
@@ -334,9 +334,9 @@ resource "aws_iam_policy" "aws_load_balancer_controller" {
           "elasticloadbalancing:AddTags"
         ]
         Resource = [
-          "arn:aws:elasticloadbalancing:*:*:targetgroup/*/*",
-          "arn:aws:elasticloadbalancing:*:*:loadbalancer/net/*/*",
-          "arn:aws:elasticloadbalancing:*:*:loadbalancer/app/*/*"
+          "${local.arn_prefix}:elasticloadbalancing:*:*:targetgroup/*/*",
+          "${local.arn_prefix}:elasticloadbalancing:*:*:loadbalancer/net/*/*",
+          "${local.arn_prefix}:elasticloadbalancing:*:*:loadbalancer/app/*/*"
         ]
         Condition = {
           StringEquals = {
@@ -356,7 +356,7 @@ resource "aws_iam_policy" "aws_load_balancer_controller" {
           "elasticloadbalancing:RegisterTargets",
           "elasticloadbalancing:DeregisterTargets"
         ]
-        Resource = "arn:aws:elasticloadbalancing:*:*:targetgroup/*/*"
+        Resource = "${local.arn_prefix}:elasticloadbalancing:*:*:targetgroup/*/*"
       },
       {
         Effect = "Allow"

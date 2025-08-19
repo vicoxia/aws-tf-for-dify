@@ -102,7 +102,7 @@ resource "aws_iam_policy" "dify_ee_s3_policy" {
       {
         Effect   = "Allow"
         Action   = "s3:*"
-        Resource = "arn:aws:s3:::${aws_s3_bucket.dify_storage.bucket}/*"
+        Resource = "${local.arn_prefix}:s3:::${aws_s3_bucket.dify_storage.bucket}/*"
       }
     ]
   })
