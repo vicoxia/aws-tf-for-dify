@@ -1,18 +1,18 @@
 #!/bin/bash
 
-# Dify企业版部署配置生成脚本
-# 在terraform apply成功后运行，生成Dify部署所需的配置信息
+# Dify Enterprise Edition Deployment Configuration Generator Script
+# Run after successful terraform apply to generate configuration information required for Dify deployment
 
 set -e
 
-# 颜色定义
+# Color definitions
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-# 日志函数
+# Log functions
 log_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
 }
@@ -29,157 +29,157 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# 检查Terraform状态
+# Check Terraform state
 check_terraform_state() {
     if [ ! -f "terraform.tfstate" ]; then
-        log_error "未找到terraform.tfstate文件，请确保terraform apply已成功运行"
+        log_error "terraform.tfstate file not found, please ensure terraform apply has run successfully"
         exit 1
     fi
     
-    # 检查Terraform状态是否有错误
+    # Check if Terraform state has any errors
     if ! terraform show &>/dev/null; then
-        log_error "Terraform状态文件损坏或无效"
+        log_error "Terraform state file is corrupted or invalid"
         exit 1
     fi
     
-    log_success "Terraform状态文件验证通过"
+    log_success "Terraform state file validation passed"
 }
 
-# 获取所有Terraform输出
+# Get all Terraform outputs
 get_terraform_outputs() {
-    log_info "获取Terraform输出信息..."
+    log_info "Getting Terraform output information..."
     
-    # 基础信息
+    # Basic information
     ENVIRONMENT=$(terraform output -raw environment 2>/dev/null || echo "unknown")
     AWS_REGION=$(terraform output -raw aws_region 2>/dev/null || echo "unknown")
     AWS_ACCOUNT_ID=$(terraform output -raw aws_account_id 2>/dev/null || echo "unknown")
     
-    # EKS信息
+    # EKS information
     CLUSTER_NAME=$(terraform output -raw eks_cluster_name 2>/dev/null || echo "")
     CLUSTER_ENDPOINT=$(terraform output -raw eks_cluster_endpoint 2>/dev/null || echo "")
     CLUSTER_SECURITY_GROUP_ID=$(terraform output -raw eks_cluster_security_group_id 2>/dev/null || echo "")
     
-    # 存储信息
+    # Storage information
     S3_BUCKET_NAME=$(terraform output -raw s3_bucket_name 2>/dev/null || echo "")
     S3_BUCKET_ARN=$(terraform output -raw s3_bucket_arn 2>/dev/null || echo "")
     S3_IAM_ROLE_ARN=$(terraform output -raw s3_iam_role_arn 2>/dev/null || echo "")
     
-    # ECR信息
+    # ECR information
     ECR_REPOSITORY_URL=$(terraform output -raw ecr_repository_url 2>/dev/null || echo "")
     ECR_EE_PLUGIN_REPOSITORY_URL=$(terraform output -raw ecr_ee_plugin_repository_url 2>/dev/null || echo "")
     ECR_EE_PLUGIN_REPOSITORY_NAME=$(terraform output -raw ecr_ee_plugin_repository_name 2>/dev/null || echo "")
     
-    # 数据库信息（包括敏感信息）
+    # Database information (including sensitive info)
     RDS_ENDPOINT=$(terraform output -raw rds_endpoint 2>/dev/null || echo "")
     RDS_READER_ENDPOINT=$(terraform output -raw rds_reader_endpoint 2>/dev/null || echo "")
     RDS_PORT=$(terraform output -raw rds_port 2>/dev/null || echo "5432")
     RDS_DATABASE_NAME=$(terraform output -raw rds_database_name 2>/dev/null || echo "dify")
     RDS_USERNAME=$(terraform output -raw rds_username 2>/dev/null || echo "postgres")
     
-    # Redis信息
+    # Redis information
     REDIS_ENDPOINT=$(terraform output -raw redis_endpoint 2>/dev/null || echo "")
     REDIS_PORT=$(terraform output -raw redis_port 2>/dev/null || echo "6379")
     
-    # OpenSearch信息
+    # OpenSearch information
     OPENSEARCH_ENDPOINT=$(terraform output -raw opensearch_endpoint 2>/dev/null || echo "")
     OPENSEARCH_DASHBOARD_ENDPOINT=$(terraform output -raw opensearch_dashboard_endpoint 2>/dev/null || echo "")
     
-    # 网络信息
+    # Network information
     VPC_ID=$(terraform output -raw vpc_id 2>/dev/null || echo "")
     PRIVATE_SUBNET_IDS=$(terraform output -json private_subnet_ids 2>/dev/null | jq -r '.[]' | tr '\n' ',' | sed 's/,$//' || echo "")
     PUBLIC_SUBNET_IDS=$(terraform output -json public_subnet_ids 2>/dev/null | jq -r '.[]' | tr '\n' ',' | sed 's/,$//' || echo "")
     
-    # IRSA角色信息
+    # IRSA role information
     DIFY_EE_S3_ROLE_ARN=$(terraform output -raw dify_ee_s3_role_arn 2>/dev/null || echo "")
     DIFY_EE_S3_ECR_ROLE_ARN=$(terraform output -raw dify_ee_s3_ecr_role_arn 2>/dev/null || echo "")
     DIFY_EE_ECR_PULL_ROLE_ARN=$(terraform output -raw dify_ee_ecr_pull_role_arn 2>/dev/null || echo "")
     
-    # ServiceAccount信息
+    # ServiceAccount information
     SERVICE_ACCOUNTS_INFO=$(terraform output -json dify_ee_service_accounts_info 2>/dev/null || echo "{}")
     
-    # Helm部署状态
+    # Helm deployment status
     HELM_RELEASES_STATUS=$(terraform output -json helm_releases_status 2>/dev/null || echo "{}")
     
-    log_success "成功获取所有Terraform输出"
+    log_success "Successfully retrieved all Terraform outputs"
 }
 
-# 从RDS配置文件中提取密码
+# Extract passwords from RDS configuration files
 get_database_passwords() {
-    log_info "提取数据库密码信息..."
+    log_info "Extracting database password information..."
     
-    # 从rds.tf文件中提取密码（这是硬编码的）
+    # Extract password from rds.tf file (hardcoded)
     if [ -f "rds.tf" ]; then
         RDS_PASSWORD=$(grep "master_password" rds.tf | sed 's/.*= *"\([^"]*\)".*/\1/' | head -1 || echo "")
         if [ -z "$RDS_PASSWORD" ]; then
-            RDS_PASSWORD="DifyRdsPassword123!"  # 默认密码
-            log_warning "使用默认RDS密码，请确认rds.tf中的实际密码"
+            RDS_PASSWORD="DifyRdsPassword123!"  # Default password
+            log_warning "Using default RDS password, please confirm actual password in rds.tf"
         fi
     else
         RDS_PASSWORD="DifyRdsPassword123!"
-        log_warning "未找到rds.tf文件，使用默认密码"
+        log_warning "rds.tf file not found, using default password"
     fi
     
-    # 从opensearch.tf文件中提取密码
+    # Extract password from opensearch.tf file
     if [ -f "opensearch.tf" ]; then
         OPENSEARCH_PASSWORD=$(grep "master_password" opensearch.tf | sed 's/.*= *"\([^"]*\)".*/\1/' | head -1 || echo "")
         if [ -z "$OPENSEARCH_PASSWORD" ]; then
-            OPENSEARCH_PASSWORD="DifyOpenSearch123!"  # 默认密码
-            log_warning "使用默认OpenSearch密码，请确认opensearch.tf中的实际密码"
+            OPENSEARCH_PASSWORD="DifyOpenSearch123!"  # Default password
+            log_warning "Using default OpenSearch password, please confirm actual password in opensearch.tf"
         fi
     else
         OPENSEARCH_PASSWORD="DifyOpenSearch123!"
-        log_warning "未找到opensearch.tf文件，使用默认密码"
+        log_warning "opensearch.tf file not found, using default password"
     fi
     
-    log_success "数据库密码信息提取完成"
+    log_success "Database password information extraction completed"
 }
 
-# 生成Dify部署配置文件
+# Generate Dify deployment configuration file
 generate_dify_config() {
     local timestamp=$(date +%Y%m%d_%H%M%S)
     
-    # 创建secret目录（在tf的上级目录）
+    # Create secret directory (in parent directory of tf)
     mkdir -p ../secret
     
     local config_file="../secret/dify_deployment_config_${timestamp}.txt"
-    local values_file="../secret/dify_values_${timestamp}.yaml"
+    # local values_file="../secret/dify_values_${timestamp}.yaml"  # Commented out - not generating values file
     
-    log_info "生成Dify部署配置文件..."
+    log_info "Generating Dify deployment configuration file..."
     
-    # 生成详细配置文件
+    # Generate detailed configuration file
     cat > "$config_file" << EOF
 # ========================================
-# Dify企业版部署配置信息
-# 生成时间: $(date)
-# 环境: $ENVIRONMENT
+# Dify Enterprise Edition Deployment Configuration
+# Generated at: $(date)
+# Environment: $ENVIRONMENT
 # ========================================
 
-## 基础信息
+## Basic Information
 ENVIRONMENT=$ENVIRONMENT
 AWS_REGION=$AWS_REGION
 AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID
 
-## EKS集群信息
+## EKS Cluster Information
 CLUSTER_NAME=$CLUSTER_NAME
 CLUSTER_ENDPOINT=$CLUSTER_ENDPOINT
 CLUSTER_SECURITY_GROUP_ID=$CLUSTER_SECURITY_GROUP_ID
 
-## 网络信息
+## Network Information
 VPC_ID=$VPC_ID
 PRIVATE_SUBNET_IDS=$PRIVATE_SUBNET_IDS
 PUBLIC_SUBNET_IDS=$PUBLIC_SUBNET_IDS
 
-## 存储信息
+## Storage Information
 S3_BUCKET_NAME=$S3_BUCKET_NAME
 S3_BUCKET_ARN=$S3_BUCKET_ARN
 S3_IAM_ROLE_ARN=$S3_IAM_ROLE_ARN
 
-## ECR容器仓库信息
+## ECR Container Registry Information
 ECR_REPOSITORY_URL=$ECR_REPOSITORY_URL
 ECR_EE_PLUGIN_REPOSITORY_URL=$ECR_EE_PLUGIN_REPOSITORY_URL
 ECR_EE_PLUGIN_REPOSITORY_NAME=$ECR_EE_PLUGIN_REPOSITORY_NAME
 
-## 数据库信息（包含敏感信息）
+## Database Information (including sensitive info)
 RDS_ENDPOINT=$RDS_ENDPOINT
 RDS_READER_ENDPOINT=$RDS_READER_ENDPOINT
 RDS_PORT=$RDS_PORT
@@ -187,570 +187,182 @@ RDS_DATABASE_NAME=$RDS_DATABASE_NAME
 RDS_USERNAME=$RDS_USERNAME
 RDS_PASSWORD=$RDS_PASSWORD
 
-## Redis缓存信息
+## Redis Cache Information
 REDIS_ENDPOINT=$REDIS_ENDPOINT
 REDIS_PORT=$REDIS_PORT
 
-## OpenSearch信息（包含敏感信息）
+## OpenSearch Information (including sensitive info)
 OPENSEARCH_ENDPOINT=$OPENSEARCH_ENDPOINT
 OPENSEARCH_DASHBOARD_ENDPOINT=$OPENSEARCH_DASHBOARD_ENDPOINT
 OPENSEARCH_USERNAME=admin
 OPENSEARCH_PASSWORD=$OPENSEARCH_PASSWORD
 
-## IRSA角色信息
+## IRSA Role Information
 DIFY_EE_S3_ROLE_ARN=$DIFY_EE_S3_ROLE_ARN
 DIFY_EE_S3_ECR_ROLE_ARN=$DIFY_EE_S3_ECR_ROLE_ARN
 DIFY_EE_ECR_PULL_ROLE_ARN=$DIFY_EE_ECR_PULL_ROLE_ARN
 
-## ServiceAccount信息
-# 详细信息请查看: terraform output dify_ee_service_accounts_info
+## ServiceAccount Information
+# For detailed information, see: terraform output dify_ee_service_accounts_info
 
-## Helm部署状态
-# 详细信息请查看: terraform output helm_releases_status
+## Helm Deployment Status
+# For detailed information, see: terraform output helm_releases_status
 
 # ========================================
-# 部署命令参考
+# Deployment Command Reference
 # ========================================
 
-## 1. 更新kubeconfig
+## 1. Update kubeconfig
 aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
 
-## 2. 验证集群连接
+## 2. Verify cluster connection
 kubectl get nodes
 
-## 3. 添加Dify Helm仓库
+## 3. Add Dify Helm repository
 helm repo add dify https://langgenius.github.io/dify-helm
 helm repo update
 
-## 4. 使用生成的values.yaml部署
-helm upgrade -i dify -f ../secret/$values_file dify/dify
+## 4. Deploy using generated values.yaml
+# helm upgrade -i dify -f ../secret/$values_file dify/dify  # Commented out - values file not generated
 
 # ========================================
-# 重要提醒
+# Important Reminders
 # ========================================
-# 1. 此文件包含敏感信息，请妥善保管
-# 2. 不要将此文件提交到版本控制系统
-# 3. 部署完成后建议删除此文件
-# 4. 定期轮换数据库密码和API密钥
+# 1. This file contains sensitive information, please handle with care
+# 2. Do not commit this file to version control systems
+# 3. Consider deleting this file after deployment
+# 4. Regularly rotate database passwords and API keys
 EOF
 
-    # 生成Helm values.yaml文件
-    cat > "$values_file" << EOF
-###################################
-# Dify企业版Helm Values配置
-# 自动生成时间: $(date)
-# 环境: $ENVIRONMENT
-###################################
 
-global:
-  appSecretKey: 'dify123456'  # 请修改为安全的密钥
-  consoleApiDomain: "console.dify.local"    # 请修改为实际域名
-  consoleWebDomain: "console.dify.local"    # 请修改为实际域名
-  serviceApiDomain: "api.dify.local"        # 请修改为实际域名
-  appApiDomain: "app.dify.local"            # 请修改为实际域名
-  appWebDomain: "app.dify.local"            # 请修改为实际域名
-  filesDomain: "upload.dify.local"          # 请修改为实际域名
-  enterpriseDomain: "enterprise.dify.local" # 请修改为实际域名
-
-ingress:
-  enabled: true
-  className: "nginx"
-  annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: "15m"
-
-# 根据环境调整副本数
-EOF
-
-    # 根据环境添加不同的资源配置
-    if [ "$ENVIRONMENT" = "test" ]; then
-        cat >> "$values_file" << EOF
-# 测试环境配置
-api:
-  replicas: 1
-  serverWorkerAmount: 1
-  innerApi:
-    apiKey: "dify123456"  # 请修改为安全的API密钥
-  serviceAccountName: "dify-api-sa"
-
-worker:
-  replicas: 1
-  celeryWorkerAmount: 1
-  serviceAccountName: "dify-api-sa"
-
-web:
-  replicas: 1
-
-sandbox:
-  replicas: 1
-  apiKey: "dify123456"  # 请修改为安全的API密钥
-
-enterprise:
-  replicas: 1
-  appSecretKey: "dify123456"  # 请修改为安全的密钥
-  adminAPIsSecretKeySalt: "dify123456"  # 请修改为安全的盐值
-  innerApi:
-    apiKey: "dify123456"  # 请修改为安全的API密钥
-
-enterpriseAudit:
-  replicas: 1
-
-enterpriseFrontend:
-  replicas: 1
-
-ssrfProxy:
-  enabled: true
-  replicas: 1
-
-unstructured:
-  enabled: true
-  replicas: 1
-
-plugin_daemon:
-  replicas: 1
-  apiKey: "dify123456"  # 请修改为安全的API密钥
-
-plugin_controller:
-  replicas: 1
-
-plugin_connector:
-  replicas: 1
-  apiKey: "dify123456"  # 请修改为安全的API密钥
-  customServiceAccount: "dify-plugin-crd-sa"
-  runnerServiceAccount: "dify-plugin-runner-sa"
-  imageRepoPrefix: "$ECR_EE_PLUGIN_REPOSITORY_URL"
-  imageRepoType: ecr
-  ecrRegion: "$AWS_REGION"
-
-gateway:
-  replicas: 1
-EOF
-    else
-        cat >> "$values_file" << EOF
-# 生产环境配置
-api:
-  replicas: 3
-  serverWorkerAmount: 1
-  innerApi:
-    apiKey: "dify123456"  # 请修改为安全的API密钥
-  serviceAccountName: "dify-api-sa"
-  resources:
-    limits:
-      cpu: 3000m
-      memory: 10240Mi
-    requests:
-      cpu: 1500m
-      memory: 5120Mi
-
-worker:
-  replicas: 3
-  celeryWorkerAmount: 1
-  serviceAccountName: "dify-api-sa"
-  resources:
-    limits:
-      cpu: 2000m
-      memory: 10240Mi
-    requests:
-      cpu: 1000m
-      memory: 5120Mi
-
-web:
-  replicas: 3
-  resources:
-    limits:
-      cpu: 1000m
-      memory: 1024Mi
-    requests:
-      cpu: 500m
-      memory: 512Mi
-
-sandbox:
-  replicas: 3
-  apiKey: "dify123456"  # 请修改为安全的API密钥
-  resources:
-    limits:
-      cpu: 1000m
-      memory: 2048Mi
-    requests:
-      cpu: 500m
-      memory: 1024Mi
-
-enterprise:
-  replicas: 3
-  appSecretKey: "dify123456"  # 请修改为安全的密钥
-  adminAPIsSecretKeySalt: "dify123456"  # 请修改为安全的盐值
-  innerApi:
-    apiKey: "dify123456"  # 请修改为安全的API密钥
-  resources:
-    limits:
-      cpu: 1000m
-      memory: 2048Mi
-    requests:
-      cpu: 500m
-      memory: 1024Mi
-
-enterpriseAudit:
-  replicas: 3
-  resources:
-    limits:
-      cpu: 1000m
-      memory: 2048Mi
-    requests:
-      cpu: 500m
-      memory: 1024Mi
-
-enterpriseFrontend:
-  replicas: 3
-  resources:
-    limits:
-      cpu: 1000m
-      memory: 1024Mi
-    requests:
-      cpu: 500m
-      memory: 512Mi
-
-ssrfProxy:
-  enabled: true
-  replicas: 3
-  resources:
-    limits:
-      cpu: 1000m
-      memory: 1024Mi
-    requests:
-      cpu: 500m
-      memory: 512Mi
-
-unstructured:
-  enabled: true
-  replicas: 3
-  resources:
-    limits:
-      cpu: 1000m
-      memory: 2048Mi
-    requests:
-      cpu: 500m
-      memory: 1024Mi
-
-plugin_daemon:
-  replicas: 3
-  apiKey: "dify123456"  # 请修改为安全的API密钥
-  resources:
-    limits:
-      cpu: 1000m
-      memory: 3072Mi
-    requests:
-      cpu: 500m
-      memory: 1536Mi
-
-plugin_controller:
-  replicas: 3
-  resources:
-    limits:
-      cpu: 1000m
-      memory: 2048Mi
-    requests:
-      cpu: 500m
-      memory: 1024Mi
-
-plugin_connector:
-  replicas: 3
-  apiKey: "dify123456"  # 请修改为安全的API密钥
-  customServiceAccount: "dify-plugin-crd-sa"
-  runnerServiceAccount: "dify-plugin-runner-sa"
-  imageRepoPrefix: "$ECR_EE_PLUGIN_REPOSITORY_URL"
-  imageRepoType: ecr
-  ecrRegion: "$AWS_REGION"
-  resources:
-    limits:
-      cpu: 1000m
-      memory: 2048Mi
-    requests:
-      cpu: 500m
-      memory: 1024Mi
-
-gateway:
-  replicas: 3
-  resources:
-    limits:
-      cpu: 1000m
-      memory: 2048Mi
-    requests:
-      cpu: 500m
-      memory: 1024Mi
-
-minio:
-  replicas: 1
-  resources:
-    limits:
-      cpu: 1000m
-      memory: 2048Mi
-    requests:
-      cpu: 500m
-      memory: 1024Mi
-EOF
-    fi
-
-    # 添加通用配置
-    cat >> "$values_file" << EOF
-
-###################################
-# 持久化存储配置 (S3 + IRSA)
-###################################
-persistence:
-  type: "s3"
-  s3:
-    endpoint: "https://s3.$AWS_REGION.amazonaws.com"
-    region: "$AWS_REGION"
-    bucketName: "$S3_BUCKET_NAME"
-    useAwsS3: true
-    useAwsManagedIam: true  # 使用IRSA模式
-
-###################################
-# 外部PostgreSQL配置
-###################################
-externalPostgres:
-  enabled: true
-  address: "$RDS_ENDPOINT"
-  port: $RDS_PORT
-  credentials:
-    dify:
-      database: "dify"
-      username: "$RDS_USERNAME"
-      password: "$RDS_PASSWORD"
-      sslmode: "require"
-    plugin_daemon:
-      database: "dify_plugin_daemon"
-      username: "$RDS_USERNAME"
-      password: "$RDS_PASSWORD"
-      sslmode: "require"
-    enterprise:
-      database: "dify_enterprise"
-      username: "$RDS_USERNAME"
-      password: "$RDS_PASSWORD"
-      sslmode: "require"
-    audit:
-      database: "dify_audit"
-      username: "$RDS_USERNAME"
-      password: "$RDS_PASSWORD"
-      sslmode: "require"
-
-###################################
-# 外部Redis配置
-###################################
-externalRedis:
-  enabled: true
-  host: "$REDIS_ENDPOINT"
-  port: $REDIS_PORT
-  username: ""
-  password: ""  # Redis未设置密码
-  useSSL: false
-
-###################################
-# 外部向量数据库配置 (OpenSearch)
-###################################
-vectorDB:
-  useExternal: true
-  externalType: "opensearch"
-  externalOpensearch:
-    endpoint: "https://$OPENSEARCH_ENDPOINT"
-    username: "admin"
-    password: "$OPENSEARCH_PASSWORD"
-    # 如果使用自签名证书，设置为true
-    verifyCerts: false
-
-###################################
-# 镜像拉取密钥（如果需要）
-###################################
-imagePullSecrets: []
-
-###################################
-# 重要提醒
-###################################
-# 1. 请修改所有默认密钥和API密钥为安全值
-# 2. 请修改域名为实际使用的域名
-# 3. 根据实际需求调整资源限制
-# 4. 确保DNS记录指向Load Balancer
-# 5. 配置SSL证书（如果使用Cert-Manager）
-EOF
-
-    log_success "配置文件生成完成:"
-    log_success "  - 详细配置: $config_file"
-    log_success "  - Helm Values: $values_file"
+    log_success "Configuration files generated successfully:"
+    log_success "  - Detailed config: $config_file"
+    # log_success "  - Helm Values: $values_file"  # Commented out - values file not generated
     
-    # 设置文件权限（仅所有者可读写）
-    chmod 600 "$config_file" "$values_file"
-    log_warning "配置文件权限已设置为600（仅所有者可读写）"
+    # Set file permissions (owner read/write only)
+    chmod 600 "$config_file" # "$values_file"  # Commented out - values file not generated
+    log_warning "Configuration file permissions set to 600 (owner read/write only)"
 }
 
-# 生成部署脚本
+# Generate deployment script
 generate_deployment_script() {
     local timestamp=$(date +%Y%m%d_%H%M%S)
     local deploy_script="../secret/deploy_dify_${timestamp}.sh"
     local values_file="../secret/dify_values_${timestamp}.yaml"
     
-    log_info "生成部署脚本..."
+    log_info "Generating deployment script..."
     
     cat > "$deploy_script" << EOF
 #!/bin/bash
 
-# Dify企业版自动部署脚本
-# 生成时间: $(date)
-# 环境: $ENVIRONMENT
+# Dify Enterprise Edition Automatic Deployment Script
+# Generated at: $(date)
+# Environment: $ENVIRONMENT
 
 set -e
 
 echo "=========================================="
-echo "  Dify企业版部署脚本"
-echo "  环境: $ENVIRONMENT"
-echo "  集群: $CLUSTER_NAME"
+echo "  Dify Enterprise Edition Deployment Script"
+echo "  Environment: $ENVIRONMENT"
+echo "  Cluster: $CLUSTER_NAME"
 echo "=========================================="
 
-# 1. 更新kubeconfig
-echo "1. 更新kubeconfig..."
+# 1. Update kubeconfig
+echo "1. Updating kubeconfig..."
 aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
 
-# 2. 验证集群连接
-echo "2. 验证集群连接..."
+# 2. Verify cluster connection
+echo "2. Verifying cluster connection..."
 kubectl get nodes
 
-# 3. 添加Dify Helm仓库
-echo "3. 添加Dify Helm仓库..."
+# 3. Add Dify Helm repository
+echo "3. Adding Dify Helm repository..."
 helm repo add dify https://langgenius.github.io/dify-helm
 helm repo update
 
-# 4. 创建命名空间（如果不存在）
-echo "4. 创建Dify命名空间..."
+# 4. Create namespace (if not exists)
+echo "4. Creating Dify namespace..."
 kubectl create namespace dify --dry-run=client -o yaml | kubectl apply -f -
 
-# 5. 部署Dify应用
-echo "5. 部署Dify应用..."
+# 5. Deploy Dify application
+echo "5. Deploying Dify application..."
 helm upgrade -i dify -f $values_file dify/dify -n dify
 
-# 6. 等待部署完成
-echo "6. 等待部署完成..."
+# 6. Wait for deployment completion
+echo "6. Waiting for deployment completion..."
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=dify -n dify --timeout=600s
 
-# 7. 显示部署状态
-echo "7. 显示部署状态..."
+# 7. Display deployment status
+echo "7. Displaying deployment status..."
 kubectl get pods -n dify
 kubectl get svc -n dify
 kubectl get ingress -n dify
 
 echo "=========================================="
-echo "  部署完成！"
+echo "  Deployment completed!"
 echo "=========================================="
 echo
-echo "下一步操作:"
-echo "1. 配置DNS记录指向Load Balancer"
-echo "2. 访问应用: https://console.dify.local"
-echo "3. 查看日志: kubectl logs -f deployment/dify-api -n dify"
+echo "Next steps:"
+echo "1. Configure DNS records to point to Load Balancer"
+echo "2. Access application: https://console.dify.local"
+echo "3. View logs: kubectl logs -f deployment/dify-api -n dify"
 echo
 EOF
 
     chmod +x "$deploy_script"
-    log_success "部署脚本生成完成: $deploy_script"
+    log_success "Deployment script generated successfully: $deploy_script"
 }
 
-# 生成输出日志
-generate_output_log() {
-    local output_file="../secret/out.log"
-    
-    log_info "生成Terraform输出日志..."
-    
-    # 生成完整的Terraform输出
-    cat > "$output_file" << EOF
-# ========================================
-# Terraform输出日志
-# 生成时间: $(date)
-# ========================================
+# Generate output log function removed - now handled by post_apply.sh
+# This avoids creating duplicate out.log files
 
-EOF
-    
-    # 添加所有Terraform输出（包括敏感信息）
-    terraform output >> "$output_file" 2>&1
-    
-    # 添加敏感信息
-    cat >> "$output_file" << EOF
-
-# ========================================
-# 敏感信息（手动添加）
-# ========================================
-
-# RDS数据库密码
-RDS_PASSWORD = "$RDS_PASSWORD"
-
-# OpenSearch管理员密码
-OPENSEARCH_PASSWORD = "$OPENSEARCH_PASSWORD"
-
-# ========================================
-# 部署配置摘要
-# ========================================
-
-环境: $ENVIRONMENT
-AWS区域: $AWS_REGION
-EKS集群: $CLUSTER_NAME
-S3存储桶: $S3_BUCKET_NAME
-RDS端点: $RDS_ENDPOINT
-Redis端点: $REDIS_ENDPOINT
-OpenSearch端点: $OPENSEARCH_ENDPOINT
-
-# ========================================
-# 重要提醒
-# ========================================
-# 1. 此文件包含敏感信息，请妥善保管
-# 2. 不要将此文件提交到版本控制系统
-# 3. 使用完毕后请安全删除
-EOF
-
-    chmod 600 "$output_file"
-    log_success "输出日志生成完成: $output_file"
-}
-
-# 主函数
+# Main function
 main() {
-    echo "=========================================="
-    echo "  Dify企业版部署配置生成器"
-    echo "=========================================="
+    echo "=============================================================="
+    echo "  Dify Enterprise Edition Deployment Configuration Generator"
+    echo "=============================================================="
     echo
     
-    # 检查Terraform状态
+    # Check Terraform state
     check_terraform_state
     
-    # 获取Terraform输出
+    # Get Terraform outputs
     get_terraform_outputs
     
-    # 获取数据库密码
+    # Get database passwords
     get_database_passwords
     
     echo
-    log_info "开始生成部署配置文件..."
+    log_info "Starting to generate deployment configuration files..."
     echo
     
-    # 生成各种配置文件
+    # Generate various configuration files
     generate_dify_config
-    generate_deployment_script
-    generate_output_log
+    # generate_deployment_script  # Commented out - not generating deployment script
+    # generate_output_log  # Removed - now handled by post_apply.sh to avoid duplicate out.log files
     
     echo
-    log_success "所有配置文件生成完成！"
+    log_success "All configuration files generated successfully!"
     echo
-    echo "生成的文件:"
-    echo "  - ../secret/dify_deployment_config_*.txt  (详细配置信息)"
-    echo "  - ../secret/dify_values_*.yaml           (Helm Values配置)"
-    echo "  - ../secret/deploy_dify_*.sh             (自动部署脚本)"
-    echo "  - ../secret/out.log                      (Terraform输出日志)"
+    echo "Generated files:"
+    echo "  - ../secret/dify_deployment_config_*.txt  (Detailed configuration information)"
+    # echo "  - ../secret/dify_values_*.yaml           (Helm Values configuration)"  # Commented out - not generated
+    # echo "  - ../secret/deploy_dify_*.sh             (Automatic deployment script)"  # Commented out - not generated
+    echo "  - ../secret/out_*.log                    (Terraform output log - generated by post_apply.sh)"
     echo
-    log_warning "重要提醒:"
-    echo "  1. 这些文件包含敏感信息，请妥善保管"
-    echo "  2. 不要将这些文件提交到版本控制系统"
-    echo "  3. 部署前请修改默认密钥和域名"
-    echo "  4. 使用完毕后请安全删除敏感文件"
+    log_warning "Important reminders:"
+    echo "  1. These files contain sensitive information, please handle with care"
+    echo "  2. Do not commit these files to version control systems"
+    echo "  3. Please modify default keys and domains before deployment"
+    echo "  4. Please delete sensitive files securely after use"
     echo
-    echo "下一步操作:"
-    echo "  1. 检查并修改生成的values.yaml文件"
-    echo "  2. 运行部署脚本: ../secret/deploy_dify_*.sh"
-    echo "  3. 或手动部署: helm upgrade -i dify -f ../secret/dify_values_*.yaml dify/dify"
+    echo "Next steps:"
+    echo "  1. Create your own Helm values.yaml file based on the configuration information"
+    # echo "  2. Run deployment script: ../secret/deploy_dify_*.sh"  # Commented out - script not generated
+    echo "  2. Deploy manually using Helm with your custom values file"
+    # echo "  3. Or deploy manually: helm upgrade -i dify -f ../secret/dify_values_*.yaml dify/dify"  # Commented out - values file not generated
     echo
 }
 
-# 运行主函数
+# Run main function
 main "$@"

@@ -18,7 +18,7 @@ resource "aws_secretsmanager_secret_version" "rds_credentials" {
   secret_id = aws_secretsmanager_secret.rds_credentials.id
   secret_string = jsonencode({
     username = "postgres"
-    password = "DifyRdsPassword123!"
+    password = var.db_master_password
   })
 }
 
@@ -65,7 +65,7 @@ resource "aws_rds_cluster" "main" {
   engine_version         = var.db_engine_version
   database_name          = "dify"
   master_username        = "postgres"
-  master_password        = "DifyRdsPassword123!" # 请修改为您的密码
+  master_password        = var.db_master_password
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [aws_security_group.rds.id]
 

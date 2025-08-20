@@ -84,8 +84,8 @@ resource "aws_opensearch_domain" "main" {
     anonymous_auth_enabled         = false
     internal_user_database_enabled = true
     master_user_options {
-      master_user_name     = "admin"
-      master_user_password = "DifyOpenSearchPass123!" # 请修改为您的密码
+      master_user_name     = var.opensearch_master_user_name
+      master_user_password = var.opensearch_master_user_password
     }
   }
 

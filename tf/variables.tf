@@ -211,6 +211,13 @@ variable "db_backup_window" {
   default     = "03:00-04:00"
 }
 
+variable "db_master_password" {
+  description = "RDS master password"
+  type        = string
+  default     = "DifyRdsPassword123!"
+  sensitive   = true
+}
+
 # Redis Configuration (Cluster Mode Disabled)
 # 节点数量和高可用性配置根据环境自动设置：
 # - test环境：单节点模式 (cache.t4g.micro)
@@ -256,6 +263,19 @@ variable "opensearch_engine_version" {
   description = "OpenSearch engine version"
   type        = string
   default     = "OpenSearch_2.19"
+}
+
+variable "opensearch_master_user_name" {
+  description = "OpenSearch master user name"
+  type        = string
+  default     = "admin"
+}
+
+variable "opensearch_master_user_password" {
+  description = "OpenSearch master user password"
+  type        = string
+  default     = "DifyOpenSearchPass123!"
+  sensitive   = true
 }
 
 # Storage Configuration
