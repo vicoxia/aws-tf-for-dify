@@ -120,12 +120,15 @@ resource "aws_rds_cluster_instance" "main" {
 # Database creation is handled by the null_resource below using RDS Data API
 
 # Use local-exec to create the additional databases
-# Choose script based on region: China regions use direct connection, others use RDS Data API
+# Global regions use RDS Data API, China regions require manual setup due to network restrictions
 resource "null_resource" "create_additional_databases" {
+  # Only create for non-China regions
+  count = local.is_china_region ? 0 : 1
+  
   depends_on = [aws_rds_cluster_instance.main, aws_secretsmanager_secret_version.rds_credentials]
 
   provisioner "local-exec" {
-    command = local.is_china_region ? "bash ${path.module}/create_dify_databases_china.sh" : "bash ${path.module}/create_dify_databases_dataapi.sh"
+    command = "bash ${path.module}/create_dify_databases_dataapi.sh"
 
     environment = {
       CLUSTER_ARN = aws_rds_cluster.main.arn
@@ -138,9 +141,100 @@ resource "null_resource" "create_additional_databases" {
   triggers = {
     cluster_arn = aws_rds_cluster.main.arn
     secret_arn  = aws_secretsmanager_secret.rds_credentials.arn
-    # Include both script hashes to trigger recreation when either script changes
     dataapi_script_hash = filemd5("${path.module}/create_dify_databases_dataapi.sh")
-    china_script_hash   = filemd5("${path.module}/create_dify_databases_china.sh")
+  }
+}
+
+# China region manual database creation instructions
+resource "null_resource" "china_database_instructions" {
+  # Only show instructions for China regions
+  count = local.is_china_region ? 1 : 0
+  
+  depends_on = [aws_rds_cluster_instance.main, aws_secretsmanager_secret_version.rds_credentials]
+
+  provisioner "local-exec" {
+    command = "echo '=== 中国区数据库创建说明 ==='"
+  }
+
+  provisioner "local-exec" {
+    command = "echo '由于网络限制，中国区需要手动创建数据库。请按照以下步骤操作：'"
+  }
+
+  provisioner "local-exec" {
+    command = "echo ''"
+  }
+
+  provisioner "local-exec" {
+    command = "echo '1. 在 VPC 内启动一台 EC2 实例（与 Aurora 在同一 VPC）'"
+  }
+
+  provisioner "local-exec" {
+    command = "echo '2. SSH 连接到 EC2 实例'"
+  }
+
+  provisioner "local-exec" {
+    command = "echo '3. 安装必要工具：'"
+  }
+
+  provisioner "local-exec" {
+    command = "echo '   sudo yum install -y postgresql jq'"
+  }
+
+  provisioner "local-exec" {
+    command = "echo ''"
+  }
+
+  provisioner "local-exec" {
+    command = "echo '4. 复制脚本到 EC2 实例：'"
+  }
+
+  provisioner "local-exec" {
+    command = "echo '   scp create_dify_databases_china.sh ec2-user@<EC2-IP>:~'"
+  }
+
+  provisioner "local-exec" {
+    command = "echo ''"
+  }
+
+  provisioner "local-exec" {
+    command = "echo '5. 在 EC2 上设置环境变量并运行脚本：'"
+  }
+
+  provisioner "local-exec" {
+    command = "echo '   export CLUSTER_ARN=\"${aws_rds_cluster.main.arn}\"'"
+  }
+
+  provisioner "local-exec" {
+    command = "echo '   export SECRET_ARN=\"${aws_secretsmanager_secret.rds_credentials.arn}\"'"
+  }
+
+  provisioner "local-exec" {
+    command = "echo '   export AWS_REGION=\"${var.aws_region}\"'"
+  }
+
+  provisioner "local-exec" {
+    command = "echo '   chmod +x create_dify_databases_china.sh'"
+  }
+
+  provisioner "local-exec" {
+    command = "echo '   ./create_dify_databases_china.sh'"
+  }
+
+  provisioner "local-exec" {
+    command = "echo ''"
+  }
+
+  provisioner "local-exec" {
+    command = "echo '详细说明请参考：create_dify_databases_china.md'"
+  }
+
+  provisioner "local-exec" {
+    command = "echo '=== 说明结束 ==='"
+  }
+
+  triggers = {
+    cluster_arn = aws_rds_cluster.main.arn
+    secret_arn  = aws_secretsmanager_secret.rds_credentials.arn
   }
 }
 

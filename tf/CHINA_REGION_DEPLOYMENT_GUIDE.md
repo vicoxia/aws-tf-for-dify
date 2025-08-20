@@ -27,23 +27,25 @@
 **功能**: 系统会根据区域自动选择合适的数据库创建方式
 
 **实现方式**:
-- **全球区域**: 使用 RDS Data API (`create_dify_databases_dataapi.sh`)
-- **中国区域**: 使用直接数据库连接 (`create_dify_databases_china.sh`)
+- **全球区域**: 使用 RDS Data API 自动创建数据库
+- **中国区域**: 跳过自动创建，提供手动操作指导
 
-**自动创建的数据库**:
+**需要创建的数据库**:
 - `dify_enterprise` - Dify 企业版主数据库
 - `dify_audit` - 审计日志数据库
 - `dify_plugin_daemon` - 插件守护进程数据库
 
 ## ⚠️ 中国区特殊要求
 
-### 1. 网络连接要求
+### 1. 手动数据库创建
 
-**要求**: 中国区需要网络能够直接访问 RDS 集群
+**原因**: 中国区的 Aurora 数据库通常部署在私有子网中，本地无法直接访问
 
 **解决方案**:
-- 确保部署环境可以访问 RDS（通过 VPN、堡垒机或公网）
-- 配置安全组允许 PostgreSQL 连接（端口 5432）
+1. **完成基础设施部署**: `terraform apply`
+2. **在 VPC 内创建 EC2 实例**: 用于访问 Aurora 数据库
+3. **运行指导脚本**: `./china_region_database_setup_guide.sh`
+4. **在 EC2 上执行数据库创建**: 使用 `create_dify_databases_china.sh`
 
 ### 2. 依赖工具要求
 
@@ -114,9 +116,18 @@ terraform plan
 terraform apply
 ```
 
-### 3. 手动创建数据库
+**注意**: 中国区部署完成后会显示数据库手动创建的指导信息。
 
-部署完成后，按照 `create_dify_databases_china.md` 的指导手动创建数据库。
+### 3. 手动创建数据库（仅中国区）
+
+```bash
+# 运行指导脚本，获取详细操作步骤
+./china_region_database_setup_guide.sh
+
+# 按照指导在 VPC 内的 EC2 实例上执行数据库创建
+# （需要先创建 EC2 实例并 SSH 连接）
+./create_dify_databases_china.sh
+```
 
 ### 4. 验证部署
 

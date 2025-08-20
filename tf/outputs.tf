@@ -191,3 +191,44 @@ output "public_subnet_ids" {
   description = "Public subnet IDs"
   value       = local.create_vpc ? aws_subnet.public[*].id : []
 }
+# ──────────────── China Region Special Instructions ────────────────
+
+output "china_region_database_setup_instructions" {
+  description = "Instructions for manual database setup in China regions"
+  value = local.is_china_region ? {
+    message = "中国区需要手动创建数据库，请按照以下步骤操作："
+    steps = [
+      "1. 在与 Aurora 相同的 VPC 内启动一台 EC2 实例",
+      "2. 确保 EC2 的安全组允许访问 Aurora（端口 5432）",
+      "3. SSH 连接到 EC2 实例",
+      "4. 安装必要工具：sudo yum install -y postgresql jq aws-cli",
+      "5. 配置 AWS 凭证：aws configure",
+      "6. 复制并运行数据库创建脚本"
+    ]
+    script_commands = [
+      "export CLUSTER_ARN=\"${aws_rds_cluster.main.arn}\"",
+      "export SECRET_ARN=\"${aws_secretsmanager_secret.rds_credentials.arn}\"",
+      "export AWS_REGION=\"${var.aws_region}\"",
+      "chmod +x create_dify_databases_china.sh",
+      "./create_dify_databases_china.sh"
+    ]
+    databases_to_create = [
+      "dify_enterprise",
+      "dify_audit", 
+      "dify_plugin_daemon"
+    ]
+    documentation = "详细说明请参考 create_dify_databases_china.md 文档"
+  } : null
+}
+
+output "database_creation_status" {
+  description = "Database creation status and next steps"
+  value = {
+    region_type = local.is_china_region ? "china" : "global"
+    auto_created = local.is_china_region ? false : true
+    manual_setup_required = local.is_china_region ? true : false
+    next_steps = local.is_china_region ? 
+      "请在 VPC 内的 EC2 实例上手动运行数据库创建脚本" : 
+      "数据库已自动创建完成"
+  }
+}
