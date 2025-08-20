@@ -78,7 +78,9 @@ resource "aws_rds_cluster" "main" {
   storage_encrypted = true
 
   # 启用Data API以支持无网络连接的数据库操作
-  enable_http_endpoint = true
+  # 中国区不支持 HTTP endpoint，需要根据区域条件启用
+  # cn-north-1 和 cn-northwest-1 不支持 Data API
+  enable_http_endpoint = var.aws_region != "cn-north-1" && var.aws_region != "cn-northwest-1"
 
   # 启用Serverless v2
   serverlessv2_scaling_configuration {
@@ -117,12 +119,15 @@ resource "aws_rds_cluster_instance" "main" {
 
 # Database creation is handled by the null_resource below using RDS Data API
 
-# Use local-exec to create the additional databases via RDS Data API
+# Use local-exec to create the additional databases
+# Choose script based on region: China regions use direct connection, others use RDS Data API
 resource "null_resource" "create_additional_databases" {
   depends_on = [aws_rds_cluster_instance.main, aws_secretsmanager_secret_version.rds_credentials]
 
   provisioner "local-exec" {
-    command = "bash ${path.module}/create_dify_databases_dataapi.sh"
+    command = var.aws_region == "cn-north-1" || var.aws_region == "cn-northwest-1" ? 
+      "bash ${path.module}/create_dify_databases_china.sh" : 
+      "bash ${path.module}/create_dify_databases_dataapi.sh"
 
     environment = {
       CLUSTER_ARN = aws_rds_cluster.main.arn
@@ -135,7 +140,9 @@ resource "null_resource" "create_additional_databases" {
   triggers = {
     cluster_arn = aws_rds_cluster.main.arn
     secret_arn  = aws_secretsmanager_secret.rds_credentials.arn
-    script_hash = filemd5("${path.module}/create_dify_databases_dataapi.sh")
+    # Include both script hashes to trigger recreation when either script changes
+    dataapi_script_hash = filemd5("${path.module}/create_dify_databases_dataapi.sh")
+    china_script_hash   = filemd5("${path.module}/create_dify_databases_china.sh")
   }
 }
 

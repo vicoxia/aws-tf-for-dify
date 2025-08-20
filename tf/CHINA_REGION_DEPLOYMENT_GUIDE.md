@@ -20,20 +20,66 @@
    - 自动检测 `cn-north-1` 和 `cn-northwest-1`
    - 无需手动配置
 
-## ⚠️ 需要手动处理的问题
+## ✅ 自动处理的功能
 
-### 1. RDS Data API 不可用
+### 1. 数据库创建自动化
 
-**问题**: 中国区不支持 RDS Data API，无法自动创建数据库
+**功能**: 系统会根据区域自动选择合适的数据库创建方式
 
-**解决方案**: 
-- 参考 `create_dify_databases_china.md` 手动创建数据库
-- 需要创建的数据库：
-  - `dify_enterprise`
-  - `dify_audit`
-  - `dify_plugin_daemon`
+**实现方式**:
+- **全球区域**: 使用 RDS Data API (`create_dify_databases_dataapi.sh`)
+- **中国区域**: 使用直接数据库连接 (`create_dify_databases_china.sh`)
 
-### 2. 网络连通性验证
+**自动创建的数据库**:
+- `dify_enterprise` - Dify 企业版主数据库
+- `dify_audit` - 审计日志数据库
+- `dify_plugin_daemon` - 插件守护进程数据库
+
+## ⚠️ 中国区特殊要求
+
+### 1. 网络连接要求
+
+**要求**: 中国区需要网络能够直接访问 RDS 集群
+
+**解决方案**:
+- 确保部署环境可以访问 RDS（通过 VPN、堡垒机或公网）
+- 配置安全组允许 PostgreSQL 连接（端口 5432）
+
+### 2. 依赖工具要求
+
+**中国区部署需要以下工具**:
+- `psql` (PostgreSQL 客户端)
+- `jq` (JSON 处理工具)
+- `aws` CLI (已配置凭证)
+
+**安装命令**:
+```bash
+# Ubuntu/Debian
+sudo apt-get install postgresql-client jq
+
+# CentOS/RHEL
+sudo yum install postgresql jq
+
+# macOS
+brew install postgresql jq
+```
+
+### 3. 网络连通性问题
+
+**问题**: 
+- Helm 仓库访问超时
+- 容器镜像拉取失败
+- 数据库连接失败
+
+**自动解决方案**:
+- RDS HTTP endpoint 自动禁用（中国区不支持）
+- 数据库创建脚本自动选择（直连模式）
+
+**手动解决方案**:
+- 参考 `CHINA_REGION_NETWORK_SOLUTIONS.md` 获取详细解决方案
+- 如果 Helm 仓库访问有问题，可以使用 `custom_helm_repositories` 配置备用仓库
+
+### 3. 网络连通性验证
 
 **建议操作**:
 ```bash
