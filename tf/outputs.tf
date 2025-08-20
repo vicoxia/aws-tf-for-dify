@@ -227,8 +227,6 @@ output "database_creation_status" {
     region_type = local.is_china_region ? "china" : "global"
     auto_created = local.is_china_region ? false : true
     manual_setup_required = local.is_china_region ? true : false
-    next_steps = local.is_china_region ? 
-      "请在 VPC 内的 EC2 实例上手动运行数据库创建脚本" : 
-      "数据库已自动创建完成"
+    next_steps = local.is_china_region ? "请在 VPC 内的 EC2 实例上手动运行数据库创建脚本" : "数据库已自动创建完成"
   }
 }
