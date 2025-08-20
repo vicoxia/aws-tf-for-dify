@@ -1,3 +1,25 @@
+# ──────────────── Basic Information ────────────────
+output "environment" {
+  description = "Deployment environment"
+  value       = var.environment
+}
+
+output "aws_region" {
+  description = "AWS region"
+  value       = var.aws_region
+}
+
+output "aws_account_id" {
+  description = "AWS account ID"
+  value       = var.aws_account_id
+}
+
+output "prefix" {
+  description = "Resource prefix"
+  value       = var.prefix
+}
+
+# ──────────────── EKS Cluster Information ────────────────
 output "eks_cluster_name" {
   description = "EKS cluster name"
   value       = aws_eks_cluster.main.name

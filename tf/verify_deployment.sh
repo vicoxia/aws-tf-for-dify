@@ -377,7 +377,7 @@ verify_kubernetes() {
 generate_report() {
     log_info "Generating verification report..."
     
-    local report_file="deployment_verification_$(date +%Y%m%d_%H%M%S).txt"
+    local report_file="../secret/deployment_verification_$(date +%Y%m%d_%H%M%S).txt"
     
     cat > "$report_file" << EOF
 # Dify Enterprise AWS Infrastructure Verification Report
