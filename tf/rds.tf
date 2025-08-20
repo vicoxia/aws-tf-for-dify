@@ -125,7 +125,7 @@ resource "null_resource" "create_additional_databases" {
   depends_on = [aws_rds_cluster_instance.main, aws_secretsmanager_secret_version.rds_credentials]
 
   provisioner "local-exec" {
-    command = var.aws_region == "cn-north-1" || var.aws_region == "cn-northwest-1" ? 
+    command = local.is_china_region ? 
       "bash ${path.module}/create_dify_databases_china.sh" : 
       "bash ${path.module}/create_dify_databases_dataapi.sh"
 

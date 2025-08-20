@@ -9,13 +9,15 @@ for region in "${regions[@]}"; do
     echo ""
     echo "测试区域: $region"
     
-    # 模拟 Terraform 的条件逻辑
+    # 模拟 Terraform 的 local.is_china_region 逻辑
     if [[ "$region" == "cn-north-1" || "$region" == "cn-northwest-1" ]]; then
+        is_china_region=true
         script="create_dify_databases_china.sh"
-        echo "  ✅ 中国区域 -> 使用脚本: $script"
+        echo "  ✅ 中国区域 (is_china_region=true) -> 使用脚本: $script"
     else
+        is_china_region=false
         script="create_dify_databases_dataapi.sh"
-        echo "  ✅ 全球区域 -> 使用脚本: $script"
+        echo "  ✅ 全球区域 (is_china_region=false) -> 使用脚本: $script"
     fi
     
     # 检查脚本是否存在
