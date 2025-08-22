@@ -1,33 +1,39 @@
 #!/bin/bash
 
-# Terraform Apply后置处理脚本
-# 自动生成Dify部署所需的配置文件
+# Terraform Apply Post-processing Script
+# Automatically generate configuration files required for Dify deployment
 
 set -e
 
 
-# 检查terraform状态
+# Check terraform state
 if [ ! -f "terraform.tfstate" ]; then
-    echo "错误: 未找到terraform.tfstate文件"
+    echo "Error: terraform.tfstate file not found"
     exit 1
 fi
 
-echo "✅ Terraform状态文件存在"
+echo "✅ Terraform state file exists"
 
-# 生成输出日志 (out.log)
-echo "📝 生成输出日志..."
+# Generate output log with timestamp
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+OUTPUT_LOG_FILE="../secret/out_${TIMESTAMP}.log"
+
+# Ensure secret directory exists
+mkdir -p "../secret"
+
+echo "📝 Generating output log..."
 {
-    echo "# Terraform输出日志"
-    echo "# 生成时间: $(date)"
+    echo "# Terraform Output Log"
+    echo "# Generated at: $(date)"
     echo "# ========================================"
     echo
     terraform output
     echo
     echo "# ========================================"
-    echo "# 敏感信息"
+    echo "# Sensitive Information"
     echo "# ========================================"
     echo
-    # 从配置文件中提取密码
+    # Extract passwords from configuration files
     if [ -f "rds.tf" ]; then
         RDS_PASSWORD=$(grep "master_password" rds.tf | sed 's/.*= *"\([^"]*\)".*/\1/' | head -1 || echo "DifyRdsPassword123!")
         echo "RDS_PASSWORD = \"$RDS_PASSWORD\""
@@ -39,9 +45,9 @@ echo "📝 生成输出日志..."
     fi
 
     echo
-    echo "# ========================================"
-    echo "# IRSA Role ARNs (for Helm values 注解)"
-    echo "# ========================================"
+    echo "# =========================================="
+    echo "# IRSA Role ARNs (for Helm values annotations)"
+    echo "# =========================================="
     S3_ROLE_ARN=$(terraform output -raw dify_ee_s3_role_arn 2>/dev/null || echo "N/A")
     S3_ECR_ROLE_ARN=$(terraform output -raw dify_ee_s3_ecr_role_arn 2>/dev/null || echo "N/A")
     ECR_PULL_ROLE_ARN=$(terraform output -raw dify_ee_ecr_pull_role_arn 2>/dev/null || echo "N/A")
@@ -49,38 +55,27 @@ echo "📝 生成输出日志..."
     echo "DIFY_EE_S3_ECR_ROLE_ARN = \"$S3_ECR_ROLE_ARN\""
     echo "DIFY_EE_ECR_PULL_ROLE_ARN = \"$ECR_PULL_ROLE_ARN\""
     
-} > out.log
+} > "$OUTPUT_LOG_FILE"
 
-chmod 600 out.log
-echo "✅ 输出日志已生成: out.log"
+chmod 600 "$OUTPUT_LOG_FILE"
+echo "✅ Output log generated: $OUTPUT_LOG_FILE"
 
-# 运行配置生成脚本
+# Run configuration generation script
 if [ -f "generate_dify_config.sh" ]; then
-    echo "🚀 运行Dify配置生成脚本..."
+    echo "🚀 Running Dify configuration generation script..."
     ./generate_dify_config.sh
 else
-    echo "⚠️  未找到generate_dify_config.sh脚本"
+    echo "⚠️  generate_dify_config.sh script not found"
 fi
 
-echo "生成的文件:"
-echo "  - out.log                      (Terraform输出日志)"
-echo "  - dify_deployment_config_*.txt (Dify部署配置)"
-echo "  - dify_values_*.yaml          (Helm Values文件)"
-echo "  - deploy_dify_*.sh            (自动部署脚本)"
+echo "Generated files:"
+echo "  - $OUTPUT_LOG_FILE                      (Terraform output log)"
+echo "  - dify_deployment_config_*.txt (Dify deployment configuration)"
+# echo "  - dify_values_*.yaml          (Helm Values files)"
+# echo "  - deploy_dify_*.sh            (Automated deployment scripts)"
 echo
-echo "下一步操作:"
-echo "  1. 检查生成的文件，并形成 values.yaml "
-echo "  2. 修改 values.yaml 中的域名和密钥"
-echo "  3. 运行 helm upgrade -i dify -f values.yaml dify/dify -n dify 部署 dify （请注意安装在 dify namespace 而非 default)"
+echo "Next steps:"
+echo "  1. Check generated files and create values.yaml"
+echo "  2. Modify domain and secrets in values.yaml"
+echo "  3. Run helm upgrade -i dify -f values.yaml dify/dify -n dify to deploy Dify (note: install in dify namespace, not default)"
 echo
-
-# 直接在控制台打印 IRSA 角色 ARN，方便复制到 values.yaml
-echo "# ========================================"
-echo "🔑 IRSA Role ARNs (复制到 Helm values 中的 serviceAccountAnnotations):"
-S3_ROLE_ARN=$(terraform output -raw dify_ee_s3_role_arn 2>/dev/null || echo "N/A")
-S3_ECR_ROLE_ARN=$(terraform output -raw dify_ee_s3_ecr_role_arn 2>/dev/null || echo "N/A")
-ECR_PULL_ROLE_ARN=$(terraform output -raw dify_ee_ecr_pull_role_arn 2>/dev/null || echo "N/A")
-echo "  - API/Worker (S3-only):           $S3_ROLE_ARN"
-echo "  - Plugin CRD/Connector (S3+ECR):  $S3_ECR_ROLE_ARN"
-echo "  - Plugin Runner (ECR Pull Only):  $ECR_PULL_ROLE_ARN"
-echo "# ========================================"

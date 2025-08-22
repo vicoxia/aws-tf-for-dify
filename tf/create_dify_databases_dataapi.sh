@@ -5,7 +5,7 @@
 # No direct network connection to the database is needed; operations are performed via AWS API calls.
 # This script will be automatically executed during the terraform build process, no manual execution is required, but you can run it manually if needed.
 
-set -e  # 遇到错误立即退出
+set -e  # Exit immediately on error
 
 
 RED='\033[0;31m'
@@ -28,40 +28,40 @@ print_error() {
 
 
 check_env_vars() {
-    print_info "检查环境变量..."
+    print_info "Checking environment variables..."
     
     required_vars=("CLUSTER_ARN" "SECRET_ARN" "AWS_REGION")
     for var in "${required_vars[@]}"; do
         if [ -z "${!var}" ]; then
-            print_error "环境变量 $var 未设置"
+            print_error "Environment variable $var is not set"
             exit 1
         fi
     done
     
-    print_info "环境变量检查完成"
+    print_info "Environment variable check completed"
 }
 
-# 检查AWS CLI和权限
+# Check AWS CLI and permissions
 check_aws_cli() {
     if ! command -v aws &> /dev/null; then
-        print_error "AWS CLI未安装"
+        print_error "AWS CLI not installed"
         exit 1
     fi
     
-    # 检查AWS凭证
+    # Check AWS credentials
     if ! aws sts get-caller-identity &>/dev/null; then
-        print_error "AWS凭证未配置或无效"
+        print_error "AWS credentials not configured or invalid"
         exit 1
     fi
     
-    print_info "AWS CLI检查完成"
+    print_info "AWS CLI check completed"
 }
 
-# 等待Aurora集群可用
+# Wait for Aurora cluster to be available
 wait_for_cluster() {
-    print_info "等待Aurora集群可用..."
+    print_info "Waiting for Aurora cluster to be available..."
     
-    max_attempts=60 # 最多等待60次，每次30秒，总计最多等待约30分钟
+    max_attempts=60 # Maximum 60 attempts, 30 seconds each, total maximum wait time about 30 minutes
     attempt=1
     
     while [ $attempt -le $max_attempts ]; do
@@ -72,25 +72,25 @@ wait_for_cluster() {
             --output text 2>/dev/null || echo "not-found")
         
         if [ "$cluster_status" = "available" ]; then
-            print_info "Aurora集群状态: 可用"
+            print_info "Aurora cluster status: available"
             return 0
         else
-            print_warning "Aurora集群状态: $cluster_status，等待中... ($attempt/$max_attempts)"
+            print_warning "Aurora cluster status: $cluster_status, waiting... ($attempt/$max_attempts)"
             sleep 30
             ((attempt++))
         fi
     done
     
-    print_error "Aurora集群等待超时"
+    print_error "Aurora cluster wait timeout"
     exit 1
 }
 
-# 使用RDS Data API执行SQL
+# Execute SQL using RDS Data API
 execute_sql() {
     local sql_statement="$1"
     local database_name="${2:-postgres}"
     
-    print_info "执行SQL: $sql_statement"
+    print_info "Executing SQL: $sql_statement"
     
     local result
     result=$(aws rds-data execute-statement \
@@ -102,15 +102,15 @@ execute_sql() {
         --output json 2>&1)
     
     if [ $? -eq 0 ]; then
-        print_info "SQL执行成功"
+        print_info "SQL execution successful"
         return 0
     else
-        print_error "SQL执行失败: $result"
+        print_error "SQL execution failed: $result"
         return 1
     fi
 }
 
-# 检查数据库是否存在
+# Check if database exists
 check_database_exists() {
     local db_name="$1"
     
@@ -126,58 +126,58 @@ check_database_exists() {
         --output json 2>/dev/null)
     
     if [ $? -eq 0 ]; then
-        # 检查返回的records数组是否有数据
+        # Check if the returned records array has data
         local record_count
         record_count=$(echo "$result" | jq '.records | length')
         
         if [ "$record_count" -gt 0 ]; then
-            return 0  # 数据库存在
+            return 0  # Database exists
         else
-            return 1  # 数据库不存在
+            return 1  # Database does not exist
         fi
     else
-        return 1  # 查询失败，假设数据库不存在
+        return 1  # Query failed, assume database does not exist
     fi
 }
 
-# 创建数据库函数
+# Create database function
 create_database_if_not_exists() {
     local db_name="$1"
     
-    print_info "检查数据库: $db_name"
+    print_info "Checking database: $db_name"
     
     if check_database_exists "$db_name"; then
-        print_warning "数据库 $db_name 已存在，跳过创建"
+        print_warning "Database $db_name already exists, skipping creation"
         return 0
     fi
     
-    print_info "创建数据库: $db_name"
+    print_info "Creating database: $db_name"
     
     local sql="CREATE DATABASE \"$db_name\";"
     
     if execute_sql "$sql" "postgres"; then
-        print_info "数据库 $db_name 创建成功"
+        print_info "Database $db_name created successfully"
         return 0
     else
-        print_error "数据库 $db_name 创建失败"
+        print_error "Database $db_name creation failed"
         return 1
     fi
 }
 
-# 主函数
+# Main function
 main() {
-    print_info "开始创建Dify企业版数据库（使用RDS Data API）..."
+    print_info "Starting Dify Enterprise database creation (using RDS Data API)..."
     
-    # 检查环境变量
+    # Check environment variables
     check_env_vars
     
-    # 检查AWS CLI和权限
+    # Check AWS CLI and permissions
     check_aws_cli
     
-    # 等待集群可用
+    # Wait for cluster to be available
     wait_for_cluster
     
-    # 创建所需的数据库
+    # Create required databases
     databases=("dify_enterprise" "dify_audit" "dify_plugin_daemon")
     
     failed_databases=()
@@ -189,55 +189,55 @@ main() {
     done
     
     if [ ${#failed_databases[@]} -eq 0 ]; then
-        print_info "所有数据库创建完成！"
+        print_info "All databases created successfully!"
         
-        # 输出连接信息
-        print_info "数据库连接信息："
-        echo "  集群ARN: $CLUSTER_ARN"
-        echo "  密钥ARN: $SECRET_ARN"
-        echo "  区域: $AWS_REGION"
-        echo "  已创建的数据库:"
+        # Output connection information
+        print_info "Database connection information:"
+        echo "  Cluster ARN: $CLUSTER_ARN"
+        echo "  Secret ARN: $SECRET_ARN"
+        echo "  Region: $AWS_REGION"
+        echo "  Created databases:"
         for db in "${databases[@]}"; do
             echo "    - $db"
         done
     else
-        print_error "以下数据库创建失败: ${failed_databases[*]}"
+        print_error "The following databases failed to create: ${failed_databases[*]}"
         exit 1
     fi
 }
 
-# 脚本帮助信息
+# Script help information
 show_help() {
     cat << EOF
 Dify Enterprise Database Creation Script (RDS Data API)
 
-用法:
-    $0 [选项]
+Usage:
+    $0 [options]
 
-环境变量:
-    CLUSTER_ARN  - Aurora集群的ARN (必需)
-    SECRET_ARN   - Secrets Manager中存储数据库凭证的ARN (必需)
-    AWS_REGION   - AWS区域 (必需)
+Environment Variables:
+    CLUSTER_ARN  - Aurora cluster ARN (required)
+    SECRET_ARN   - ARN of database credentials stored in Secrets Manager (required)
+    AWS_REGION   - AWS region (required)
 
-示例:
+Example:
     export CLUSTER_ARN="arn:aws:rds:us-east-2:123456789012:cluster:my-cluster"
     export SECRET_ARN="arn:aws:secretsmanager:us-east-2:123456789012:secret:rds-db-credentials/cluster-123456/postgres"
     export AWS_REGION="us-east-2"
     $0
 
-注意:
-    - 此脚本使用RDS Data API，无需网络连接到数据库
-    - 需要AWS CLI已配置且有适当权限
-    - Aurora集群必须启用Data API (enable_http_endpoint = true)
-    - 数据库凭证必须存储在AWS Secrets Manager中
+Notes:
+    - This script uses RDS Data API, no network connection to database required
+    - AWS CLI must be configured with appropriate permissions
+    - Aurora cluster must have Data API enabled (enable_http_endpoint = true)
+    - Database credentials must be stored in AWS Secrets Manager
 
-选项:
-    -h, --help   显示此帮助信息
+Options:
+    -h, --help   Show this help information
 
 EOF
 }
 
-# 处理命令行参数
+# Handle command line arguments
 case "$1" in
     -h|--help)
         show_help
@@ -247,7 +247,7 @@ case "$1" in
         main
         ;;
     *)
-        print_error "未知选项: $1"
+        print_error "Unknown option: $1"
         show_help
         exit 1
         ;;

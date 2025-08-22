@@ -33,6 +33,7 @@ db_min_capacity = 0.5       # 最小容量（ACU）- 测试环境推荐0.5
 db_max_capacity = 4         # 最大容量（ACU）- 测试环境推荐4，生产环境可设置更高
 db_backup_retention_period = 7
 db_backup_window = "03:00-04:00"
+db_master_password = "DifyRdsPassword123!"
 
 # ElastiCache Redis配置 (Cluster Mode Disabled)
 # 根据环境自动配置：
@@ -47,6 +48,8 @@ opensearch_instance_type = "t3.small.search"
 opensearch_instance_count = 1
 opensearch_ebs_volume_size = 20
 opensearch_engine_version = "OpenSearch_2.19"  # OpenSearch版本
+opensearch_master_user_name = "admin"
+opensearch_master_user_password = "DifyOpenSearchPass123!"
 
 # ──────────────── 存储配置 ────────────────
 # S3存储桶配置

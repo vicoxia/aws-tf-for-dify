@@ -1,128 +1,128 @@
 #!/bin/bash
 
-# AWS权限检查脚本
-# 用于验证部署Dify企业版所需的AWS权限
+# AWS permissions check script
+# Used to verify AWS permissions required for deploying Dify Enterprise Edition
 
 set -e
 
-echo "🔍 AWS权限检查脚本"
-echo "===================="
+echo "🔍 AWS Permissions Check Script"
+echo "==============================="
 
-# 颜色定义
+# Color definitions
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# 检查AWS CLI是否已配置
+# Check if AWS CLI is configured
 if ! command -v aws &> /dev/null; then
-    echo -e "${RED}❌ AWS CLI未安装${NC}"
+    echo -e "${RED}❌ AWS CLI not installed${NC}"
     exit 1
 fi
 
-# 获取当前用户信息
-echo "📋 获取当前用户信息..."
+# Get current user information
+echo "📋 Getting current user information..."
 CALLER_IDENTITY=$(aws sts get-caller-identity 2>/dev/null)
 if [ $? -ne 0 ]; then
-    echo -e "${RED}❌ AWS CLI未配置或凭证无效${NC}"
-    echo "请运行: aws configure"
+    echo -e "${RED}❌ AWS CLI not configured or credentials invalid${NC}"
+    echo "Please run: aws configure"
     exit 1
 fi
 
-# 提取用户信息
+# Extract user information
 USER_ARN=$(echo "$CALLER_IDENTITY" | jq -r '.Arn')
 ACCOUNT_ID=$(echo "$CALLER_IDENTITY" | jq -r '.Account')
 USER_ID=$(echo "$CALLER_IDENTITY" | jq -r '.UserId')
 
-echo "📊 用户信息: Account ID: $ACCOUNT_ID"
+echo "📊 User Information: Account ID: $ACCOUNT_ID"
 
-# 检查用户类型（用户还是角色）
+# Check user type (user or role)
 if [[ $USER_ARN == *":user/"* ]]; then
     USER_TYPE="user"
     USER_NAME=$(echo "$USER_ARN" | cut -d'/' -f2)
-    echo "   类型: IAM User ($USER_NAME)"
+    echo "   Type: IAM User ($USER_NAME)"
 elif [[ $USER_ARN == *":role/"* ]]; then
     USER_TYPE="role"
     ROLE_NAME=$(echo "$USER_ARN" | cut -d'/' -f2)
-    echo "   类型: IAM Role ($ROLE_NAME)"
+    echo "   Type: IAM Role ($ROLE_NAME)"
 else
-    echo -e "${YELLOW}⚠️  未知的用户类型${NC}"
+    echo -e "${YELLOW}⚠️  Unknown user type${NC}"
 fi
 
 echo ""
-echo "🔐 检查权限策略..."
+echo "🔐 Checking permission policies..."
 
-# 检查用户权限（如果是IAM用户）
+# Check user permissions (if IAM user)
 if [ "$USER_TYPE" = "user" ]; then
-    # 简化策略检查，只显示关键信息
-    ATTACHED_POLICIES=$(aws iam list-attached-user-policies --user-name "$USER_NAME" --query 'AttachedPolicies[].PolicyName' --output text 2>/dev/null || echo "无法获取")
-    if [ "$ATTACHED_POLICIES" != "无法获取" ] && [ -n "$ATTACHED_POLICIES" ]; then
-        echo "   附加策略: $ATTACHED_POLICIES"
+    # Simplified policy check, only show key information
+    ATTACHED_POLICIES=$(aws iam list-attached-user-policies --user-name "$USER_NAME" --query 'AttachedPolicies[].PolicyName' --output text 2>/dev/null || echo "Unable to retrieve")
+    if [ "$ATTACHED_POLICIES" != "Unable to retrieve" ] && [ -n "$ATTACHED_POLICIES" ]; then
+        echo "   Attached Policies: $ATTACHED_POLICIES"
     fi
     
     USER_GROUPS=$(aws iam get-groups-for-user --user-name "$USER_NAME" --query 'Groups[].GroupName' --output text 2>/dev/null || echo "")
     if [ -n "$USER_GROUPS" ]; then
-        echo "   用户组: $USER_GROUPS"
+        echo "   User Groups: $USER_GROUPS"
     fi
 fi
 
 echo ""
-echo "🧪 测试关键服务权限..."
+echo "🧪 Testing key service permissions..."
 
-# 定义需要测试的服务和命令
+# Define services and commands to test
 REGION=${AWS_REGION:-us-west-2}
 
-# 测试每个服务的权限
-echo "检查 EKS 权限..."
+# Test permissions for each service
+echo "Checking EKS permissions..."
 if aws eks list-clusters --region "$REGION" > /dev/null 2>&1; then
     echo -e "✅ ${GREEN}EKS permissions OK${NC}"
 else
     echo -e "❌ ${RED}EKS permissions missing or insufficient${NC}"
 fi
 
-echo "检查 RDS 权限..."
+echo "Checking RDS permissions..."
 if aws rds describe-db-clusters --region "$REGION" > /dev/null 2>&1; then
     echo -e "✅ ${GREEN}RDS permissions OK${NC}"
 else
     echo -e "❌ ${RED}RDS permissions missing or insufficient${NC}"
 fi
 
-echo "检查 EC2 权限..."
+echo "Checking EC2 permissions..."
 if aws ec2 describe-vpcs --region "$REGION" > /dev/null 2>&1; then
     echo -e "✅ ${GREEN}EC2 permissions OK${NC}"
 else
     echo -e "❌ ${RED}EC2 permissions missing or insufficient${NC}"
 fi
 
-echo "检查 IAM 权限..."
+echo "Checking IAM permissions..."
 if aws iam list-roles --max-items 1 > /dev/null 2>&1; then
     echo -e "✅ ${GREEN}IAM permissions OK${NC}"
 else
     echo -e "❌ ${RED}IAM permissions missing or insufficient${NC}"
 fi
 
-echo "检查 S3 权限..."
+echo "Checking S3 permissions..."
 if aws s3 ls > /dev/null 2>&1; then
     echo -e "✅ ${GREEN}S3 permissions OK${NC}"
 else
     echo -e "❌ ${RED}S3 permissions missing or insufficient${NC}"
 fi
 
-echo "检查 ElastiCache 权限..."
+echo "Checking ElastiCache permissions..."
 if aws elasticache describe-cache-clusters --region "$REGION" > /dev/null 2>&1; then
     echo -e "✅ ${GREEN}ElastiCache permissions OK${NC}"
 else
     echo -e "❌ ${RED}ElastiCache permissions missing or insufficient${NC}"
 fi
 
-echo "检查 OpenSearch 权限..."
+echo "Checking OpenSearch permissions..."
 if aws opensearch list-domain-names --region "$REGION" > /dev/null 2>&1; then
     echo -e "✅ ${GREEN}OpenSearch permissions OK${NC}"
 else
     echo -e "❌ ${RED}OpenSearch permissions missing or insufficient${NC}"
 fi
 
-echo "检查 ECR 权限..."
+echo "Checking ECR permissions..."
 if aws ecr describe-repositories --region "$REGION" > /dev/null 2>&1; then
     echo -e "✅ ${GREEN}ECR permissions OK${NC}"
 else
@@ -130,20 +130,20 @@ else
 fi
 
 echo ""
-echo "📍 检查区域可用性..."
+echo "📍 Checking region availability..."
 
 if aws ec2 describe-availability-zones --region "$REGION" > /dev/null 2>&1; then
     AZ_COUNT=$(aws ec2 describe-availability-zones --region "$REGION" --query 'length(AvailabilityZones)' --output text)
-    echo -e "✅ ${GREEN}区域 $REGION 可用 ($AZ_COUNT 个可用区)${NC}"
+    echo -e "✅ ${GREEN}Region $REGION available ($AZ_COUNT availability zones)${NC}"
 else
-    echo -e "❌ ${RED}无法访问区域 $REGION${NC}"
+    echo -e "❌ ${RED}Cannot access region $REGION${NC}"
 fi
 
 echo ""
-echo "📋 权限检查总结"
-echo "================"
+echo "📋 Permission Check Summary"
+echo "==========================="
 
-# 检查是否有管理员权限
+# Check if has administrator permissions
 HAS_ADMIN=false
 if [ "$USER_TYPE" = "user" ]; then
     if aws iam list-attached-user-policies --user-name "$USER_NAME" 2>/dev/null | grep -q "AdministratorAccess" || \
@@ -153,14 +153,14 @@ if [ "$USER_TYPE" = "user" ]; then
 fi
 
 if [ "$HAS_ADMIN" = true ]; then
-    echo -e "✅ ${GREEN}检测到管理员权限 - 可以部署Dify企业版${NC}"
+    echo -e "✅ ${GREEN}Administrator permissions detected - can deploy Dify Enterprise Edition${NC}"
 else
-    echo -e "⚠️  ${YELLOW}未检测到完整的管理员权限${NC}"
-    echo "   需要权限: EC2, EKS, RDS, ElastiCache, OpenSearch, S3, IAM, ECR"
+    echo -e "⚠️  ${YELLOW}Complete administrator permissions not detected${NC}"
+    echo "   Required permissions: EC2, EKS, RDS, ElastiCache, OpenSearch, S3, IAM, ECR"
 fi
 
 echo ""
-echo "🚀 下一步: $([ "$HAS_ADMIN" = true ] && echo "terraform init" || echo "联系AWS管理员添加权限")"
+echo "🚀 Next step: $([ "$HAS_ADMIN" = true ] && echo "terraform init" || echo "Contact AWS administrator to add permissions")"
 
 echo ""
-echo "✨ 权限检查完成！"
+echo "✨ Permission check completed!"
